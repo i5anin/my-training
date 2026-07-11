@@ -1,13 +1,28 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { nanoid } from 'nanoid'
 import { savePhoto, getPhotoUrl, deletePhoto } from '@/db'
 import { Camera, X } from 'lucide-vue-next'
 
-const props = defineProps<{ photoIds: string[] }>()
+const props = withDefaults(defineProps<{ photoIds: string[]; thumbSize?: number }>(), {
+  thumbSize: 32,
+})
 const emit = defineEmits<{ update: [ids: string[]] }>()
 
 const previews = ref<Map<string, string>>(new Map())
+const lightboxId = ref<string | null>(null)
+
+function openLightbox(id: string) {
+  lightboxId.value = id
+}
+function closeLightbox() {
+  lightboxId.value = null
+}
+function onLightboxKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeLightbox()
+}
+onMounted(() => window.addEventListener('keydown', onLightboxKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown))
 
 function loadPreviews() {
   for (const id of props.photoIds) {
@@ -68,8 +83,13 @@ function drawToBlob(img: HTMLImageElement, maxSize: number): Promise<Blob> {
 <template>
   <div class="photo-attach">
     <div class="photo-previews" v-if="photoIds.length">
-      <div v-for="id in photoIds" :key="id" class="photo-thumb">
-        <img :src="previews.get(id)" />
+      <div
+        v-for="id in photoIds"
+        :key="id"
+        class="photo-thumb"
+        :style="{ width: thumbSize + 'px', height: thumbSize + 'px' }"
+      >
+        <img :src="previews.get(id)" @click="openLightbox(id)" title="Открыть в полный размер" />
         <button class="photo-remove" @click="removePhoto(id)"><X class="size-3" /></button>
       </div>
     </div>
@@ -78,6 +98,13 @@ function drawToBlob(img: HTMLImageElement, maxSize: number): Promise<Blob> {
       <input type="file" accept="image/*" multiple @change="onFileSelect" hidden />
     </label>
   </div>
+
+  <Teleport to="body">
+    <div v-if="lightboxId" class="photo-lightbox" @click="closeLightbox">
+      <button class="lightbox-close" @click="closeLightbox"><X class="size-5" /></button>
+      <img :src="previews.get(lightboxId)" @click.stop />
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -104,6 +131,7 @@ function drawToBlob(img: HTMLImageElement, maxSize: number): Promise<Blob> {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  cursor: zoom-in;
 }
 
 .photo-remove {
@@ -123,5 +151,41 @@ function drawToBlob(img: HTMLImageElement, maxSize: number): Promise<Blob> {
   cursor: pointer;
   font-size: 1.1rem;
   padding: 2px 4px;
+}
+
+.photo-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  cursor: zoom-out;
+}
+
+.photo-lightbox img {
+  max-width: 92vw;
+  max-height: 92vh;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  cursor: default;
+}
+
+.lightbox-close {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 </style>

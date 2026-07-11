@@ -22,6 +22,9 @@ const router = createRouter({
 
     // Catalog tab
     { path: '/catalog', name: 'catalog', component: Stub, meta: { tab: 'catalog' } },
+
+    // Calendar tab
+    { path: '/calendar', name: 'calendar', component: Stub, meta: { tab: 'calendar' } },
   ],
 })
 

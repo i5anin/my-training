@@ -18,12 +18,14 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,
     port: 4173,
     proxy: {
       '/api': 'http://localhost:3778',
     },
   },
   preview: {
+    host: true,
     port: 4173,
     proxy: {
       '/api': 'http://localhost:3778',

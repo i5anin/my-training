@@ -9,6 +9,7 @@ import { useWorkoutStore } from '@/stores/workoutStore'
 import ExerciseEntryCard from '@/components/ExerciseEntryCard.vue'
 import MuscleGroupSelect from '@/components/MuscleGroupSelect.vue'
 import MuscleGroupPhotos from '@/components/MuscleGroupPhotos.vue'
+import PhotoAttach from '@/components/PhotoAttach.vue'
 import { GripVertical, Save } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -58,6 +59,7 @@ const emptyWorkout = (): Workout => ({
   muscleGroups: [],
   entries: [],
   description: '',
+  photoIds: [],
   primaryType: '',
   secondaryType: '',
   createdAt: new Date().toISOString(),
@@ -277,6 +279,16 @@ onUnmounted(() => {
             v-model="workout.description"
             placeholder="Описание тренировки..."
             class="desc-input"
+          />
+        </div>
+
+        <!-- Фото тренировки -->
+        <div class="field-row">
+          <label>Фото</label>
+          <PhotoAttach
+            :photoIds="workout.photoIds || []"
+            :thumbSize="64"
+            @update="workout.photoIds = $event"
           />
         </div>
       </div>

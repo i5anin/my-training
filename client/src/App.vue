@@ -6,17 +6,23 @@ import { useWorkoutStore } from '@/stores/workoutStore'
 import WorkoutListView from '@/views/WorkoutListView.vue'
 import StatsView from '@/views/StatsView.vue'
 import CatalogView from '@/views/CatalogView.vue'
+import CalendarView from '@/views/CalendarView.vue'
+import ProgressSummary from '@/components/ProgressSummary.vue'
 import { Button } from '@/components/ui/button'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { Dumbbell, LineChart, Library } from 'lucide-vue-next'
+import { Dumbbell, LineChart, Library, CalendarDays } from 'lucide-vue-next'
 
 const catalogStore = useCatalogStore()
 const workoutStore = useWorkoutStore()
 const route = useRoute()
 const router = useRouter()
 
-type Tab = 'workouts' | 'stats' | 'catalog'
+type Tab = 'workouts' | 'stats' | 'catalog' | 'calendar'
 const activePanel = computed<Tab>(() => (route.meta.tab as Tab) ?? 'workouts')
+
+// Вкладки без правой панели — занимают весь экран
+const FULL_WIDTH_TABS = new Set<Tab>(['catalog', 'calendar'])
+const isFullWidth = computed(() => FULL_WIDTH_TABS.has(activePanel.value))
 
 // Маршруты, которые показывают что-то в правой панели
 const RIGHT_PANEL_ROUTES = new Set(['new-workout', 'edit-workout', 'exercise-chart'])
@@ -26,6 +32,7 @@ function goTab(tab: Tab) {
   if (activePanel.value === tab) return
   if (tab === 'workouts') router.push({ name: 'list' })
   else if (tab === 'stats') router.push({ name: 'stats' })
+  else if (tab === 'calendar') router.push({ name: 'calendar' })
   else router.push({ name: 'catalog' })
 }
 
@@ -94,6 +101,14 @@ onMounted(async () => {
           <Library class="size-4" />
           <span class="hidden sm:inline">Каталог</span>
         </Button>
+        <Button
+          :variant="activePanel === 'calendar' ? 'secondary' : 'ghost'"
+          size="sm"
+          @click="goTab('calendar')"
+        >
+          <CalendarDays class="size-4" />
+          <span class="hidden sm:inline">Календарь</span>
+        </Button>
       </nav>
     </header>
 
@@ -101,35 +116,41 @@ onMounted(async () => {
       <!-- Левая панель: список -->
       <aside
         class="panel-list"
-        :class="{ 'panel-full': activePanel === 'catalog' }"
-        :style="activePanel !== 'catalog' ? { width: panelWidth + 'px' } : {}"
+        :class="{ 'panel-full': isFullWidth }"
+        :style="!isFullWidth ? { width: panelWidth + 'px' } : {}"
       >
         <div class="panel-list-body">
           <WorkoutListView v-if="activePanel === 'workouts'" />
           <StatsView v-else-if="activePanel === 'stats'" />
+          <CalendarView v-else-if="activePanel === 'calendar'" />
           <CatalogView v-else />
         </div>
       </aside>
 
-      <!-- Resize handle (везде кроме каталога) -->
+      <!-- Resize handle (везде кроме каталога/календаря) -->
       <div
-        v-if="activePanel !== 'catalog'"
+        v-if="!isFullWidth"
         class="resize-handle"
         @mousedown="startDrag"
         title="Тяни чтобы изменить ширину"
       ></div>
 
-      <!-- Правая панель: редактор / графики (везде кроме каталога) -->
-      <main v-if="activePanel !== 'catalog'" class="panel-editor">
+      <!-- Правая панель: редактор / графики (везде кроме каталога/календаря) -->
+      <main v-if="!isFullWidth" class="panel-editor">
         <RouterView v-if="hasRightContent" />
+        <div v-else-if="activePanel === 'stats'" class="stats-landing">
+          <ProgressSummary />
+          <div class="editor-empty">
+            <div class="editor-empty-inner">
+              <div class="editor-empty-icon"><LineChart class="size-10" /></div>
+              <div>Выберите упражнение чтобы увидеть график</div>
+            </div>
+          </div>
+        </div>
         <div v-else class="editor-empty">
           <div class="editor-empty-inner">
-            <div class="editor-empty-icon">
-            <LineChart v-if="activePanel === 'stats'" class="size-10" />
-            <Dumbbell v-else class="size-10" />
-          </div>
-            <div v-if="activePanel === 'stats'">Выберите упражнение чтобы увидеть график</div>
-            <div v-else>Выберите тренировку или создайте новую</div>
+            <div class="editor-empty-icon"><Dumbbell class="size-10" /></div>
+            <div>Выберите тренировку или создайте новую</div>
           </div>
         </div>
       </main>
@@ -150,6 +171,36 @@ html, body {
   background: #121212;
   color: #eee;
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* ─── Скроллбары ─── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a3a transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #3a3a3a;
+  border-radius: 20px;
+  border: 2px solid #121212;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #5a8;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 #app {
@@ -213,6 +264,9 @@ html, body {
   width: 100%;
   max-width: 1100px;
 }
+.panel-list.panel-full .panel-list-body > .calendar-view {
+  max-width: 1600px;
+}
 
 /* ─── Resize handle ─── */
 .resize-handle {
@@ -270,6 +324,17 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.stats-landing {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stats-landing .editor-empty {
+  flex: 1;
 }
 
 .editor-empty-inner {
