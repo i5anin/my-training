@@ -294,6 +294,16 @@ function addBurnoutToCol(colIdx: number) {
   border-top: 1px solid #3a2a00;
 }
 
+/* Ряд-подсказка добивок схлопнут, пока курсор не над таблицей —
+   не резервирует высоту в каждой карточке */
+.burnout-hint-row {
+  display: none;
+}
+
+.sets-table:hover .burnout-hint-row {
+  display: table-row;
+}
+
 /* Кнопки «↳ добавить добивку»: невидимы, пока курсор не над таблицей —
    иначе пустые пунктирные ряды выглядят как поехавшая вёрстка */
 .add-burnout-here {

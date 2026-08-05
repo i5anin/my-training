@@ -8,6 +8,7 @@ import { useWorkoutStore } from '@/stores/workoutStore'
 import { useEditTiming } from '@/composables/useEditTiming'
 import MuscleGroupPhotos from '@/components/MuscleGroupPhotos.vue'
 import WorkoutFormHeader from '@/components/WorkoutFormHeader.vue'
+import WorkoutReadView from '@/components/WorkoutReadView.vue'
 import WorkoutEntryList from '@/components/WorkoutEntryList.vue'
 import { Pencil, Save } from 'lucide-vue-next'
 
@@ -217,31 +218,34 @@ onUnmounted(() => {
   <!-- Пока грузится следующая тренировка — показываем предыдущую (без моргания) -->
   <div class="editor-layout" v-if="!loading || workout.id > 0">
 
-    <!-- Левая колонка: форма + упражнения.
-         fieldset[disabled] отключает все инпуты и кнопки в режиме просмотра -->
-    <fieldset class="col-main edit-scope" :class="{ readonly: !editMode }" :disabled="!editMode">
-      <WorkoutFormHeader
-        :isNew="isNew"
-        v-model:id="workout.id"
-        v-model:date="workout.date"
-        v-model:primaryType="workout.primaryType"
-        v-model:secondaryType="workout.secondaryType"
-        v-model:description="workout.description"
-        v-model:photoIds="workout.photoIds"
-      />
+    <!-- Левая колонка: просмотр — таблица как на бумажном бланке,
+         редактирование — форма с инпутами -->
+    <div class="col-main">
+      <template v-if="editMode">
+        <WorkoutFormHeader
+          :isNew="isNew"
+          v-model:id="workout.id"
+          v-model:date="workout.date"
+          v-model:primaryType="workout.primaryType"
+          v-model:secondaryType="workout.secondaryType"
+          v-model:description="workout.description"
+          v-model:photoIds="workout.photoIds"
+        />
 
-      <!-- Упражнения -->
-      <WorkoutEntryList
-        v-model:entries="workout.entries"
-        :muscleGroups="workout.muscleGroups"
-        :readonly="!editMode"
-      />
+        <!-- Упражнения -->
+        <WorkoutEntryList
+          v-model:entries="workout.entries"
+          :muscleGroups="workout.muscleGroups"
+        />
 
-      <div class="add-buttons" v-if="editMode">
-        <button class="btn" @click="addEntry">+ Упражнение</button>
-        <button class="btn" @click="addSuperset">+ Суперсет</button>
-      </div>
-    </fieldset>
+        <div class="add-buttons">
+          <button class="btn" @click="addEntry">+ Упражнение</button>
+          <button class="btn" @click="addSuperset">+ Суперсет</button>
+        </div>
+      </template>
+
+      <WorkoutReadView v-else :workout="workout" />
+    </div>
 
     <!-- Правая колонка: фото мышц (sticky) -->
     <div class="col-photos">
@@ -338,8 +342,6 @@ onUnmounted(() => {
   background: #3a5a7a;
 }
 
-/* Стили режима просмотра (.edit-scope.readonly) — в assets/main.css:
-   они глобальные, т.к. стилизуют внутренности дочерних компонентов */
 
 .btn {
   padding: 8px 16px;

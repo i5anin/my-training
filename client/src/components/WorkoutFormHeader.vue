@@ -27,51 +27,49 @@ const photoIds = defineModel<string[]>('photoIds')
   </div>
 
   <div class="form-grid">
-    <!-- Дата -->
-    <div class="field-row">
-      <label>Дата</label>
-      <input type="date" v-model="date" class="date-input" />
+    <!-- Первая строка: дата + группы + фото -->
+    <div class="head-row">
+      <div class="field-row">
+        <label>Дата</label>
+        <input type="date" v-model="date" class="date-input" />
+      </div>
+      <div class="field-row grow">
+        <MuscleGroupSelect
+          :modelValue="primaryType ?? ''"
+          @update:modelValue="primaryType = $event"
+          label="Основная группа"
+        />
+      </div>
+      <div class="field-row grow">
+        <MuscleGroupSelect
+          :modelValue="secondaryType ?? ''"
+          @update:modelValue="secondaryType = $event"
+          label="Дополнительная группа"
+          :disabledId="primaryType ?? ''"
+        />
+      </div>
+      <div class="field-row">
+        <label>Фото</label>
+        <PhotoAttach
+          :photoIds="photoIds || []"
+          :thumbSize="32"
+          @update="photoIds = $event"
+        />
+      </div>
     </div>
 
-    <!-- Группы мышц -->
-    <div class="field-row types-row">
-      <MuscleGroupSelect
-        :modelValue="primaryType ?? ''"
-        @update:modelValue="primaryType = $event"
-        label="Основная группа"
-      />
-      <MuscleGroupSelect
-        :modelValue="secondaryType ?? ''"
-        @update:modelValue="secondaryType = $event"
-        label="Дополнительная группа"
-        :disabledId="primaryType ?? ''"
-      />
-    </div>
-
-    <!-- Описание -->
-    <div class="field-row">
-      <input
-        v-model="description"
-        placeholder="Описание тренировки..."
-        class="desc-input"
-      />
-    </div>
-
-    <!-- Фото тренировки -->
-    <div class="field-row">
-      <label>Фото</label>
-      <PhotoAttach
-        :photoIds="photoIds || []"
-        :thumbSize="64"
-        @update="photoIds = $event"
-      />
-    </div>
+    <!-- Вторая строка: описание -->
+    <input
+      v-model="description"
+      placeholder="Описание тренировки..."
+      class="desc-input"
+    />
   </div>
 </template>
 
 <style scoped>
 .editor-top {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .id-heading {
@@ -114,27 +112,35 @@ const photoIds = defineModel<string[]>('photoIds')
   background: #1a1a1a;
   border: 1px solid #2a2a2a;
   border-radius: 10px;
-  padding: 14px 16px;
-  margin-bottom: 16px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* Всё в одну строку: дата, группы, фото */
+.head-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 .field-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+}
+
+.field-row.grow {
+  flex: 1;
+  min-width: 180px;
 }
 
 .field-row label {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: #666;
-}
-
-.types-row {
-  flex-direction: row;
-  gap: 12px;
 }
 
 .date-input,
