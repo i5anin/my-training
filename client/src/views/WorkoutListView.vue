@@ -4,11 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { useCatalogStore } from '@/stores/catalogStore'
 import { deleteWorkout, exportAll, importAll } from '@/db'
-import { getMuscleGroupIcon, getMuscleGroupImage } from '@/constants/muscleGroupIcons'
-import { Upload, Download, Clock, Copy, X, Plus } from 'lucide-vue-next'
+import { formatDate, gapDays, type WorkoutListRow } from '@/composables/workoutFormat'
+import WorkoutRow from '@/components/WorkoutRow.vue'
+import { Upload, Download, Clock, Plus } from 'lucide-vue-next'
+import type { Workout } from '@/types'
 import dayjs from 'dayjs'
-import 'dayjs/locale/ru'
-dayjs.locale('ru')
 
 const route = useRoute()
 const router = useRouter()
@@ -28,34 +28,84 @@ const filtered = computed(() => {
     const exNames = (w.entries || [])
       .map((e) => catalogStore.getExerciseById(e.exerciseId)?.name || '')
       .join(' ')
-    return `${w.date} ${mgLabels} ${exNames} #${w.id}`.toLowerCase().includes(q)
+    return `${w.date} ${formatDate(w.date)} ${mgLabels} ${exNames} #${w.id}`
+      .toLowerCase()
+      .includes(q)
   })
 })
 
-function formatDate(iso: string) {
-  return dayjs(iso).format('dd DD.MM.YY')
+// Сортировка по дате (не по id — иначе месяцы перемешаются)
+function sortByDateDesc(list: Workout[]): Workout[] {
+  return [...list].sort((a, b) => {
+    const d = dayjs(b.date).valueOf() - dayjs(a.date).valueOf()
+    return d !== 0 ? d : b.id - a.id
+  })
 }
 
-function gapDays(isoA: string, isoB: string): number {
-  return Math.abs(dayjs(isoB).diff(dayjs(isoA), 'day'))
+const sortedFiltered = computed(() => sortByDateDesc(filtered.value))
+
+// Разрывы в днях — по полному списку стора: фильтр поиска не должен искажать интервалы
+const gapDaysById = computed(() => {
+  const list = sortByDateDesc(workoutStore.workouts)
+  const map = new Map<number, number | null>()
+  list.forEach((w, i) => {
+    map.set(w.id, i < list.length - 1 ? gapDays(list[i + 1]!.date, w.date) : null)
+  })
+  return map
+})
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-function mgLabels(ids: string[]) {
-  return (ids || []).map((id) => {
-    const label = catalogStore.muscleGroups.find((mg) => mg.id === id)?.label || id
-    return `${getMuscleGroupIcon(id)} ${label}`
-  }).join('  ')
+// Группировка по месяцам
+const groups = computed(() => {
+  const rows: WorkoutListRow[] = sortedFiltered.value.map((w) => ({
+    ...w,
+    gapDays: gapDaysById.value.get(w.id) ?? null,
+  }))
+
+  const map = new Map<string, WorkoutListRow[]>()
+  for (const w of rows) {
+    const key = dayjs(w.date).format('YYYY-MM')
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(w)
+  }
+
+  return [...map.entries()].map(([key, workouts]) => ({
+    key,
+    label: capitalize(dayjs(key + '-01').format('MMMM YYYY')),
+    workouts,
+  }))
+})
+
+// ─── Подозрение на дубликат: одинаковый состав упражнений и подходов ───
+function workoutSignature(w: Workout): string | null {
+  const entries = w.entries || []
+  if (!entries.length) return null
+  return entries
+    .map((e) => `${e.exerciseId}:${(e.sets || []).map((s) => `${s.weight}x${s.reps}`).join(',')}`)
+    .sort()
+    .join('|')
 }
 
-function mgIcons(ids: string[]) {
-  return (ids || []).map((id) => getMuscleGroupIcon(id)).join(' ')
-}
+const duplicatesOf = computed(() => {
+  const bySig = new Map<string, number[]>()
+  for (const w of workoutStore.workouts) {
+    const sig = workoutSignature(w)
+    if (!sig) continue
+    if (!bySig.has(sig)) bySig.set(sig, [])
+    bySig.get(sig)!.push(w.id)
+  }
+  const res = new Map<number, number[]>()
+  for (const ids of bySig.values()) {
+    if (ids.length < 2) continue
+    for (const id of ids) res.set(id, ids.filter((x) => x !== id))
+  }
+  return res
+})
 
-function mgTooltip(ids: string[]) {
-  return (ids || []).map((id) => catalogStore.muscleGroups.find((mg) => mg.id === id)?.label || id).join(', ')
-}
-
-async function duplicate(workoutId: number) {
+function duplicate(workoutId: number) {
   router.push({ name: 'new-workout', query: { from: workoutId } })
 }
 
@@ -77,16 +127,6 @@ async function doExport() {
   URL.revokeObjectURL(url)
 }
 
-function fmtDuration(ms: number): string {
-  const s = Math.round(ms / 1000)
-  if (s < 60) return `${s}с`
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m}м`
-  const h = Math.floor(m / 60)
-  const rm = m % 60
-  return rm > 0 ? `${h}ч ${rm}м` : `${h}ч`
-}
-
 async function doImport() {
   const input = document.createElement('input')
   input.type = 'file'
@@ -94,12 +134,17 @@ async function doImport() {
   input.onchange = async () => {
     const file = input.files?.[0]
     if (!file) return
-    const text = await file.text()
-    const data = JSON.parse(text)
-    if (!confirm(`Импортировать ${data.workouts?.length || 0} тренировок? Текущие данные будут заменены.`)) return
-    await importAll(data)
-    await catalogStore.load()
-    await workoutStore.load()
+    try {
+      const data = JSON.parse(await file.text())
+      if (!Array.isArray(data.workouts)) throw new Error('в файле нет массива workouts')
+      const count = data.workouts.length
+      if (!confirm(`Импортировать ${count} тренировок? Текущие данные будут заменены.`)) return
+      await importAll(data)
+      await catalogStore.load()
+      await workoutStore.load()
+    } catch (e) {
+      alert('Импорт не выполнен: ' + (e instanceof Error ? e.message : String(e)))
+    }
   }
   input.click()
 }
@@ -107,7 +152,7 @@ async function doImport() {
 
 <template>
   <div class="list-view">
-    <!-- Поиск + кнопка -->
+    <!-- Поиск + кнопки -->
     <div class="top-bar">
       <input v-model="search" placeholder="Поиск..." class="search-input" />
     </div>
@@ -115,11 +160,13 @@ async function doImport() {
       <button class="btn btn-primary btn-new" @click="router.push({ name: 'new-workout' })">
         <Plus class="size-4" /> Тренировка
       </button>
-      <button class="btn btn-sm" title="Экспорт" @click="doExport"><Upload class="size-4" /></button>
-      <button class="btn btn-sm" title="Импорт" @click="doImport"><Download class="size-4" /></button>
+      <button class="btn btn-sm" title="Экспорт" @click="doExport"><Download class="size-4" /></button>
+      <button class="btn btn-sm" title="Импорт" @click="doImport"><Upload class="size-4" /></button>
     </div>
 
-    <div v-if="filtered.length === 0" class="empty">Нет тренировок</div>
+    <div v-if="filtered.length === 0" class="empty">
+      {{ search ? 'Ничего не найдено' : 'Нет тренировок' }}
+    </div>
 
     <div class="table-wrap" v-else>
       <table class="wt">
@@ -133,39 +180,23 @@ async function doImport() {
             <th class="th-act"></th>
           </tr>
         </thead>
-        <tbody>
-          <tr
-            v-for="(w, i) in filtered"
-            :key="w.id"
-            class="wrow"
-            :class="{ active: w.id === activeId }"
-            @click="router.push({ name: 'edit-workout', params: { id: w.id } })"
-          >
-            <td class="td-id">#{{ w.id }}</td>
-            <td class="td-date">
-              <div>{{ formatDate(w.date) }}</div>
-              <div class="td-gap" v-if="i < filtered.length - 1">
-                +{{ gapDays(filtered[i + 1]!.date, w.date) }}д
-              </div>
-            </td>
-            <td class="td-mg" :title="mgTooltip(w.muscleGroups)">
-              <span v-for="id in (w.muscleGroups || [])" :key="id" class="mg-icon-wrap">
-                <img v-if="getMuscleGroupImage(id)" :src="getMuscleGroupImage(id)!" :alt="id" class="mg-icon-img" />
-                <span v-else>{{ getMuscleGroupIcon(id) }}</span>
-              </span>
-            </td>
-            <td class="td-ex">
-              {{ (w.entries || []).length }}<span class="td-sets" v-if="(w.entries || []).reduce((s,e)=>s+(e.sets||[]).length,0)"> / {{ (w.entries || []).reduce((s,e)=>s+(e.sets||[]).length,0) }}</span>
-            </td>
-            <td class="td-time">
-              <span v-if="w.totalEditMs && w.totalEditMs > 0" class="time-badge">{{ fmtDuration(w.totalEditMs) }}</span>
-              <span v-else class="time-none">—</span>
-            </td>
-            <td class="td-act" @click.stop>
-              <button class="act-btn act-dup" title="Дублировать" @click="duplicate(w.id)"><Copy class="size-3.5" /></button>
-              <button class="act-btn act-del" title="Удалить" @click="remove(w.id)"><X class="size-3.5" /></button>
+        <tbody v-for="g in groups" :key="g.key">
+          <tr class="month-row">
+            <td colspan="6">
+              <span class="month-label">{{ g.label }}</span>
+              <span class="month-count">{{ g.workouts.length }}</span>
             </td>
           </tr>
+          <WorkoutRow
+            v-for="w in g.workouts"
+            :key="w.id"
+            :workout="w"
+            :active="w.id === activeId"
+            :duplicates="duplicatesOf.get(w.id)"
+            @edit="router.push({ name: 'edit-workout', params: { id: w.id } })"
+            @duplicate="duplicate(w.id)"
+            @remove="remove(w.id)"
+          />
         </tbody>
       </table>
     </div>
@@ -179,6 +210,14 @@ async function doImport() {
   height: 100%;
   overflow: hidden;
   padding: 10px;
+  container-type: inline-size;
+}
+
+/* Узкая панель — колонка времени не влезает, прячем (ячейки строк прячет WorkoutRow) */
+@container (max-width: 420px) {
+  .th-time {
+    display: none;
+  }
 }
 
 .top-bar {
@@ -227,6 +266,25 @@ async function doImport() {
   font-size: 0.8rem;
 }
 
+.month-row td {
+  padding: 8px 4px 4px;
+  border-bottom: 1px solid #222;
+}
+
+.month-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.month-count {
+  margin-left: 6px;
+  font-size: 0.65rem;
+  color: #444;
+}
+
 .wt thead th {
   position: sticky;
   top: 0;
@@ -241,92 +299,10 @@ async function doImport() {
   white-space: nowrap;
 }
 
-.wrow {
-  cursor: pointer;
-  border-bottom: 1px solid #1e1e1e;
-  transition: background 0.1s;
-}
-
-.wrow:hover { background: #1e1e1e; }
-.wrow.active { background: #1a2a22; }
-.wrow.active .td-id { color: #5a8; }
-
+/* Идёт после .month-row td намеренно: как в исходнике, padding 5px 4px побеждает */
 .wt td {
   padding: 5px 4px;
   vertical-align: middle;
-}
-
-.td-id {
-  font-weight: bold;
-  color: #5a8;
-  white-space: nowrap;
-  width: 36px;
-}
-
-.td-date {
-  white-space: nowrap;
-  color: #888;
-  font-size: 0.74rem;
-  width: 82px;
-}
-
-.td-gap {
-  font-size: 0.65rem;
-  color: #444;
-  margin-top: 1px;
-}
-
-.td-mg {
-  white-space: nowrap;
-  width: 60px;
-}
-
-.mg-icon-wrap {
-  display: inline-block;
-  margin-right: 2px;
-}
-
-.mg-icon-img {
-  width: 22px;
-  height: 22px;
-  object-fit: cover;
-  border-radius: 4px;
-  vertical-align: middle;
-}
-
-.td-ex {
-  color: #888;
-  white-space: nowrap;
-  text-align: center;
-  width: 36px;
-}
-
-.td-sets {
-  color: #555;
-  font-size: 0.72rem;
-}
-
-.td-time {
-  text-align: right;
-  white-space: nowrap;
-  width: 52px;
-}
-
-.time-badge {
-  color: #5a8;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.time-none {
-  color: #333;
-  font-size: 0.75rem;
-}
-
-.td-act {
-  text-align: right;
-  white-space: nowrap;
-  width: 56px;
 }
 
 .btn {
@@ -362,30 +338,4 @@ async function doImport() {
   padding: 6px 10px;
   font-size: 0.85rem;
 }
-
-.btn-xs {
-  padding: 2px 7px;
-  font-size: 0.78rem;
-}
-
-.btn-danger:hover {
-  background: #7a2222;
-  border-color: #7a2222;
-}
-
-/* Action icons in table */
-.act-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.95rem;
-  padding: 3px 5px;
-  line-height: 1;
-  color: #555;
-  border-radius: 4px;
-  transition: color 0.1s, background 0.1s;
-}
-.act-btn:hover { background: #2a2a2a; }
-.act-dup:hover { color: #5a8; }
-.act-del:hover { color: #d55; }
 </style>

@@ -4,6 +4,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
+import eslint from 'vite-plugin-eslint2'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,6 +12,15 @@ export default defineConfig({
     vue(),
     vueDevTools(),
     tailwindcss(),
+    // Жёсткий линт: ошибка = красный оверлей в браузере + падение сборки.
+    // lintOnStart выключен намеренно: иначе сервер падает до открытия
+    // страницы и оверлей показать некому — линт идёт при загрузке модулей.
+    eslint({
+      lintOnStart: false,
+      emitError: true,
+      emitWarning: true,
+      build: true,
+    }),
   ],
   resolve: {
     alias: {

@@ -91,8 +91,9 @@ function dayTitle(cell: DayCell): string {
 }
 
 function openDay(cell: DayCell) {
-  if (!cell.workouts.length) return
-  router.push({ name: 'edit-workout', params: { id: cell.workouts[0].id } })
+  const first = cell.workouts[0]
+  if (!first) return
+  router.push({ name: 'edit-workout', params: { id: first.id } })
 }
 
 function prevYear() { year.value-- }
@@ -295,8 +296,16 @@ function goToday() { year.value = dayjs().year() }
 }
 
 @media (max-width: 600px) {
+  /* Одна колонка месяцев: включаем прокрутку, снимаем фиксированные строки,
+     иначе 9 из 12 месяцев обрезаются */
+  .calendar-view {
+    overflow-y: auto;
+  }
+
   .cal-grid {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-rows: minmax(230px, auto);
   }
 }
 </style>

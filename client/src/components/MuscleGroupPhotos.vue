@@ -19,7 +19,8 @@ interface GroupInfo {
 
 const groups = computed<GroupInfo[]>(() => {
   const result: GroupInfo[] = []
-  for (const id of [props.primaryType, props.secondaryType]) {
+  // Set — от дублей ключей, если primaryType === secondaryType
+  for (const id of new Set([props.primaryType, props.secondaryType])) {
     if (!id) continue
     const photo = getMuscleGroupPhoto(id)
     if (!photo) continue

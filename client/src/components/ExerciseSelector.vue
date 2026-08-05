@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCatalogStore } from '@/stores/catalogStore'
 import { useWorkoutStore } from '@/stores/workoutStore'
@@ -57,7 +57,8 @@ function addCustom() {
   if (!query.value.trim()) return
   const id = query.value.trim().toLowerCase().replace(/\s+/g, '-')
   const name = query.value.trim()
-  catalogStore.addExercise({ id, name, muscleGroups: props.muscleGroups.length ? [...props.muscleGroups] : ['chest'] })
+  // Без fallback на 'chest': лучше пустые группы, чем заведомо неверные
+  catalogStore.addExercise({ id, name, muscleGroups: [...props.muscleGroups] })
   emit('update:modelValue', id)
   query.value = ''
   isOpen.value = false

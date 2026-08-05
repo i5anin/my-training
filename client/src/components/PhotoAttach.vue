@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { nanoid } from 'nanoid'
 import { savePhoto, getPhotoUrl, deletePhoto } from '@/db'
 import { Camera, X } from 'lucide-vue-next'
@@ -21,7 +21,12 @@ function closeLightbox() {
 function onLightboxKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') closeLightbox()
 }
-onMounted(() => window.addEventListener('keydown', onLightboxKeydown))
+// Глобальный слушатель — только пока лайтбокс открыт
+// (компонент рендерится в каждой карточке упражнения)
+watch(lightboxId, (open) => {
+  if (open) window.addEventListener('keydown', onLightboxKeydown)
+  else window.removeEventListener('keydown', onLightboxKeydown)
+})
 onUnmounted(() => window.removeEventListener('keydown', onLightboxKeydown))
 
 function loadPreviews() {
@@ -35,18 +40,22 @@ loadPreviews()
 watch(() => props.photoIds, loadPreviews)
 
 async function onFileSelect(e: Event) {
-  const files = (e.target as HTMLInputElement).files
+  const input = e.target as HTMLInputElement
+  const files = input.files
   if (!files) return
   const newIds: string[] = [...props.photoIds]
 
   for (const file of files) {
     const id = nanoid()
     const resized = await resizeImage(file)
+    if (!resized) continue // битый файл — пропускаем
     await savePhoto({ id, blob: resized })
     newIds.push(id)
     previews.value.set(id, getPhotoUrl(id))
   }
 
+  // Сброс value: иначе повторный выбор того же файла не даст change
+  input.value = ''
   emit('update', newIds)
 }
 
@@ -56,13 +65,20 @@ async function removePhoto(id: string) {
   emit('update', props.photoIds.filter((pid) => pid !== id))
 }
 
-function resizeImage(file: File): Promise<Blob> {
+function resizeImage(file: File): Promise<Blob | null> {
   return new Promise((resolve) => {
     const img = new Image()
+    const url = URL.createObjectURL(file)
     img.onload = () => {
+      URL.revokeObjectURL(url)
       drawToBlob(img, 1920).then(resolve)
     }
-    img.src = URL.createObjectURL(file)
+    // Не-изображение — не зависаем на await, отдаём null
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(null)
+    }
+    img.src = url
   })
 }
 

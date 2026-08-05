@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { useCatalogStore } from '@/stores/catalogStore'
-import { getMuscleGroupIcon } from '@/constants/muscleGroupIcons'
+import type { SetRow } from '@/types'
 import SparkCell from '@/components/SparkCell.vue'
 import MgIcon from '@/components/MgIcon.vue'
 
@@ -26,22 +26,24 @@ interface ExStat {
   muscleGroups: string[]
   count: number
   best1RM: number
-  lastDate: string
   pts1RM: number[]   // max1RM per workout, chronological
   ptsVol: number[]   // tonnage per workout
 }
 
 const exStats = computed<ExStat[]>(() => {
-  const sorted = [...workoutStore.workouts].sort((a, b) => a.id - b.id)
+  // Хронология по дате: id не хронологичен для записей задним числом
+  const sorted = [...workoutStore.workouts].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.id - b.id,
+  )
   const map = new Map<string, ExStat>()
 
   for (const w of sorted) {
     for (const entry of (w.entries || [])) {
-      const sets = (entry.sets || []).filter((s: any) => !s.isBurnout && !s.isWarmup)
-      const weights = sets.map((s: any) => s.weight ?? 0).filter((x: number) => x > 0)
+      const sets: SetRow[] = (entry.sets || []).filter((s) => !s.isBurnout && !s.isWarmup)
+      const weights = sets.map((s) => s.weight ?? 0).filter((x) => x > 0)
       if (!weights.length) continue
 
-      const max1RM = Math.round(Math.max(...sets.map((s: any) => epley(s.weight, s.reps))))
+      const max1RM = Math.round(Math.max(...sets.map((s) => epley(s.weight, s.reps))))
       if (!max1RM) continue
 
       const ex = catalogStore.getExerciseById(entry.exerciseId)
@@ -54,7 +56,6 @@ const exStats = computed<ExStat[]>(() => {
           muscleGroups: ex.muscleGroups,
           count: 0,
           best1RM: 0,
-          lastDate: w.date,
           pts1RM: [],
           ptsVol: [],
         })
@@ -62,9 +63,8 @@ const exStats = computed<ExStat[]>(() => {
       const stat = map.get(entry.exerciseId)!
       stat.count++
       stat.best1RM = Math.max(stat.best1RM, max1RM)
-      stat.lastDate = w.date
       stat.pts1RM.push(max1RM)
-      stat.ptsVol.push(sets.reduce((s: number, x: any) => s + (x.weight ?? 0) * (x.reps ?? 0), 0))
+      stat.ptsVol.push(sets.reduce((s, x) => s + (x.weight ?? 0) * (x.reps ?? 0), 0))
     }
   }
 
@@ -120,7 +120,11 @@ const metric = ref<'1rm' | 'vol'>('1rm')
         v-for="s in filteredStats"
         :key="s.exerciseId"
         class="ex-row"
-        @click="router.push({ name: 'exercise-chart', params: { id: s.exerciseId } })"
+        @click="router.push({
+          name: 'exercise-chart',
+          params: { id: s.exerciseId },
+          query: { m: metric === 'vol' ? 'tonnage' : 'max1RM' },
+        })"
       >
         <!-- Левая часть: название + мета -->
         <div class="ex-left">

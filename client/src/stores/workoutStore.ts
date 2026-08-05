@@ -8,7 +8,11 @@ export const useWorkoutStore = defineStore('workouts', () => {
 
   async function load() {
     workouts.value = await getAllWorkouts()
-    workouts.value.sort((a, b) => b.id - a.id)
+    // По дате (новые сверху), id — тай-брейк: id не хронологичен
+    // для тренировок, внесённых задним числом
+    workouts.value.sort(
+      (a, b) => b.date.localeCompare(a.date) || b.id - a.id,
+    )
   }
 
   return { workouts, load }

@@ -4,6 +4,7 @@ const API = '/api'
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API}${url}`, init)
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${url}`)
   return res.json()
 }
 
@@ -72,7 +73,8 @@ export async function savePhoto(photo: { id: string; blob: Blob }): Promise<void
   const form = new FormData()
   form.append('id', photo.id)
   form.append('file', photo.blob, `${photo.id}.jpg`)
-  await fetch(`${API}/photos`, { method: 'POST', body: form })
+  const res = await fetch(`${API}/photos`, { method: 'POST', body: form })
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}: /photos`)
 }
 
 export function getPhotoUrl(id: string): string {

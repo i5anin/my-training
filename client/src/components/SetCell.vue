@@ -20,15 +20,6 @@ const workoutStore = useWorkoutStore()
 const weightSugg = computed(() => suggestWeight(props.exerciseId, workoutStore.workouts))
 const repsSugg  = computed(() => suggestReps(props.exerciseId, workoutStore.workouts))
 
-// 1RM по формуле Эпли: w × (1 + r/30), при r=1 → само значение
-const oneRM = computed(() => {
-  const w = props.modelValue.weight
-  const r = props.modelValue.reps
-  if (!w || !r) return null
-  if (r === 1) return w
-  return Math.round(w * (1 + r / 30))
-})
-
 // Refs for focus management
 const weightInputRef = ref<HTMLInputElement>()
 const repsInputRef   = ref<HTMLInputElement>()
@@ -40,7 +31,8 @@ const filteredWeights = computed(() => {
   const q = weightQuery.value
   return q ? weightSugg.value.all.filter(w => String(w).includes(q)) : weightSugg.value.all
 })
-function onWeightFocus() { weightQuery.value = props.modelValue.weight ? String(props.modelValue.weight) : ''; weightOpen.value = true }
+// На фокусе показываем ВСЕ варианты (пустой query), фильтр — только после ввода
+function onWeightFocus() { weightQuery.value = ''; weightOpen.value = true }
 function onWeightInput(e: Event) {
   const v = (e.target as HTMLInputElement).value
   weightQuery.value = v; weightOpen.value = true
@@ -61,7 +53,7 @@ const filteredReps = computed(() => {
   const q = repsQuery.value
   return q ? repsSugg.value.filter(r => String(r).includes(q)) : repsSugg.value
 })
-function onRepsFocus() { repsQuery.value = props.modelValue.reps ? String(props.modelValue.reps) : ''; repsOpen.value = true }
+function onRepsFocus() { repsQuery.value = ''; repsOpen.value = true }
 function onRepsInput(e: Event) {
   const v = (e.target as HTMLInputElement).value
   repsQuery.value = v; repsOpen.value = true

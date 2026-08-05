@@ -2,54 +2,25 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { nanoid } from 'nanoid'
-import type { Workout, ExerciseEntry, SetRow } from '@/types'
+import type { Workout, SetRow } from '@/types'
 import { getWorkout, getNextWorkoutId, saveWorkout } from '@/db'
-import { useCatalogStore } from '@/stores/catalogStore'
 import { useWorkoutStore } from '@/stores/workoutStore'
-import ExerciseEntryCard from '@/components/ExerciseEntryCard.vue'
-import MuscleGroupSelect from '@/components/MuscleGroupSelect.vue'
+import { useEditTiming } from '@/composables/useEditTiming'
 import MuscleGroupPhotos from '@/components/MuscleGroupPhotos.vue'
-import PhotoAttach from '@/components/PhotoAttach.vue'
-import { GripVertical, Save } from 'lucide-vue-next'
+import WorkoutFormHeader from '@/components/WorkoutFormHeader.vue'
+import WorkoutEntryList from '@/components/WorkoutEntryList.vue'
+import { Pencil, Save } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
-const catalogStore = useCatalogStore()
 const workoutStore = useWorkoutStore()
 
 const loading = ref(false)
 const saving = ref(false)
 
-const MAX_SESSION_MS = 5 * 60 * 1000
-let workoutSessionStart = 0
-
-function startWorkoutSession() {
-  workoutSessionStart = Date.now()
-}
-
-function finalizeWorkoutTime() {
-  if (!workoutSessionStart) return
-  const elapsed = Math.min(Date.now() - workoutSessionStart, MAX_SESSION_MS)
-  if (elapsed >= 2000) {
-    workout.value.totalEditMs = (workout.value.totalEditMs ?? 0) + elapsed
-  }
-  workoutSessionStart = Date.now()
-}
-
-// keep per-entry session helpers for the badge in ExerciseEntryCard
-const entrySessionStarts = new Map<string, number>()
-function startEntrySession(id: string) { entrySessionStarts.set(id, Date.now()) }
-function finalizeEntryTimes() {
-  const now = Date.now()
-  workout.value.entries = workout.value.entries.map((entry) => {
-    const start = entrySessionStarts.get(entry.id)
-    if (start == null) return entry
-    const elapsed = Math.min(now - start, MAX_SESSION_MS)
-    if (elapsed < 2000) return entry
-    return { ...entry, totalEditMs: (entry.totalEditMs ?? 0) + elapsed }
-  })
-  workout.value.entries.forEach((e) => startEntrySession(e.id))
-}
+// Режим: существующие тренировки открываются на просмотр,
+// правка — только после явного «Редактировать»; новые — сразу в правке
+const editMode = ref(false)
 
 const isNew = computed(() => route.name === 'new-workout')
 
@@ -68,13 +39,33 @@ const emptyWorkout = (): Workout => ({
 
 const workout = ref<Workout>(emptyWorkout())
 
+// Учёт времени редактирования — тренировки целиком и каждого упражнения
+const {
+  startWorkoutSession,
+  finalizeWorkoutTime,
+  startEntrySession,
+  finalizeEntryTimes,
+} = useEditTiming(workout)
+
+// Снапшот последнего сохранённого состояния — автосейв пишет только при изменениях
+let savedSnapshot = ''
+// Группы сверх первых двух (legacy-данные) — не теряем их при syncMuscleGroups
+let legacyTail: string[] = []
+// Токен против гонки: при быстром переключении тренировок побеждает последний запрос
+let loadSeq = 0
+
 async function loadWorkout() {
+  const seq = ++loadSeq
   loading.value = true
-  workout.value = emptyWorkout()
+  legacyTail = []
+  editMode.value = route.name !== 'edit-workout'
   try {
     if (route.name === 'edit-workout') {
+      // Старые данные не сбрасываем: контент виден, пока грузится
+      // следующая тренировка — переключение не моргает
       const id = Number(route.params.id)
       const existing = await getWorkout(id)
+      if (seq !== loadSeq) return
       if (existing) {
         workout.value = JSON.parse(JSON.stringify(existing))
         // Совместимость: если старые данные без primaryType — берём из muscleGroups
@@ -84,14 +75,18 @@ async function loadWorkout() {
         if (!workout.value.secondaryType && workout.value.muscleGroups.length > 1) {
           workout.value.secondaryType = workout.value.muscleGroups[1]
         }
+        legacyTail = workout.value.muscleGroups.slice(2)
       } else {
         router.replace('/')
       }
     } else {
+      workout.value = emptyWorkout()
       workout.value.id = await getNextWorkoutId()
+      if (seq !== loadSeq) return
       const fromId = Number(route.query.from)
       if (fromId) {
         const source = await getWorkout(fromId)
+        if (seq !== loadSeq) return
         if (source) {
           workout.value.primaryType = source.primaryType || source.muscleGroups[0] || ''
           workout.value.secondaryType = source.secondaryType || source.muscleGroups[1] || ''
@@ -101,26 +96,34 @@ async function loadWorkout() {
             sets: e.sets.map((s) => ({ ...s })),
             photoIds: undefined,
             description: undefined,
+            createdAt: new Date().toISOString(),
+            totalEditMs: 0,
           }))
         }
       }
     }
     syncMuscleGroups()
   } finally {
-    loading.value = false
+    if (seq === loadSeq) loading.value = false
   }
+  if (seq !== loadSeq) return
   workout.value.entries.forEach((e) => startEntrySession(e.id))
   startWorkoutSession()
+  savedSnapshot = JSON.stringify(workout.value)
 }
 
 watch(() => [route.name, route.params.id], loadWorkout, { immediate: true })
 
-// Синхронизируем массив muscleGroups из двух селектов
+// Синхронизируем массив muscleGroups из двух селектов;
+// группы сверх двух (legacy) сохраняем, а не молча стираем
 function syncMuscleGroups() {
   const groups: string[] = []
   if (workout.value.primaryType) groups.push(workout.value.primaryType)
   if (workout.value.secondaryType && workout.value.secondaryType !== workout.value.primaryType) {
     groups.push(workout.value.secondaryType)
+  }
+  for (const g of legacyTail) {
+    if (!groups.includes(g)) groups.push(g)
   }
   workout.value.muscleGroups = groups
 }
@@ -152,79 +155,56 @@ function addSuperset() {
   startEntrySession(e2.id)
 }
 
-function updateEntry(index: number, entry: ExerciseEntry) {
-  workout.value.entries[index] = entry
-}
-
-function removeEntry(index: number) {
-  workout.value.entries.splice(index, 1)
-}
-
-// Drag-and-drop reorder
-const dragSrc = ref<number | null>(null)
-const dragOver = ref<number | null>(null)
-
-function onDragStart(i: number, e: DragEvent) {
-  dragSrc.value = i
-  e.dataTransfer!.effectAllowed = 'move'
-}
-
-function onDragOver(i: number, e: DragEvent) {
-  e.preventDefault()
-  e.dataTransfer!.dropEffect = 'move'
-  dragOver.value = i
-}
-
-function onDrop(i: number) {
-  const src = dragSrc.value
-  if (src == null || src === i) { dragSrc.value = null; dragOver.value = null; return }
-  const entries = [...workout.value.entries]
-  const [moved] = entries.splice(src, 1)
-  entries.splice(i, 0, moved)
-  workout.value.entries = entries
-  dragSrc.value = null
-  dragOver.value = null
-}
-
-function onDragEnd() {
-  dragSrc.value = null
-  dragOver.value = null
-}
-
-function getSupersetLabel(entry: ExerciseEntry): string | undefined {
-  if (!entry.supersetGroupId) return undefined
-  const groupEntries = workout.value.entries.filter((e) => e.supersetGroupId === entry.supersetGroupId)
-  const pos = groupEntries.indexOf(entry) + 1
-  return `Суперсет ${pos}/${groupEntries.length}`
-}
-
 async function save() {
-  if (saving.value) return
+  if (saving.value || !editMode.value) return
+  // Невалидный номер (пустое поле, дробь) — не пишем в базу
+  const id = workout.value.id
+  if (!Number.isInteger(id) || id < 1) return
   saving.value = true
   finalizeWorkoutTime()
   finalizeEntryTimes()
   try {
+    const wasNew = isNew.value
     await saveWorkout(JSON.parse(JSON.stringify(workout.value)))
+    savedSnapshot = JSON.stringify(workout.value)
     await workoutStore.load()
+    // Сохранили — возвращаемся в просмотр
+    editMode.value = false
+    // Новая тренировка сохранена — переходим на её постоянный маршрут
+    if (wasNew) {
+      router.replace({ name: 'edit-workout', params: { id: workout.value.id } })
+    }
   } finally {
     saving.value = false
   }
 }
 
-// Ctrl+S
+// Выход из редактирования без сохранения: откат к последнему снапшоту
+function cancelEdit() {
+  if (isNew.value) {
+    router.push({ name: 'list' })
+    return
+  }
+  if (savedSnapshot) workout.value = JSON.parse(savedSnapshot)
+  editMode.value = false
+}
+
+// Ctrl+S — по физической клавише, работает и на русской раскладке
 function onKeydown(e: KeyboardEvent) {
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
     e.preventDefault()
     save()
   }
 }
 
-// Авто-сохранение каждые 30 сек, если есть несохранённые упражнения
+// Авто-сохранение каждые 30 сек — только если есть несохранённые изменения
 let autoSaveTimer: ReturnType<typeof setInterval>
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
   autoSaveTimer = setInterval(() => {
-    if (!loading.value && workout.value.entries.length > 0) save()
+    if (loading.value || !editMode.value || workout.value.entries.length === 0) return
+    if (JSON.stringify(workout.value) === savedSnapshot) return
+    save()
   }, 30_000)
 })
 onUnmounted(() => {
@@ -234,100 +214,34 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="editor-layout" v-if="!loading">
+  <!-- Пока грузится следующая тренировка — показываем предыдущую (без моргания) -->
+  <div class="editor-layout" v-if="!loading || workout.id > 0">
 
-    <!-- Левая колонка: форма + упражнения -->
-    <div class="col-main">
-      <div class="editor-top">
-        <div class="id-heading">
-          <span class="id-label">{{ isNew ? 'Новая тренировка' : 'Тренировка' }} #</span>
-          <input
-            type="number"
-            class="id-input"
-            v-model.number="workout.id"
-            min="1"
-            title="Номер тренировки"
-          />
-        </div>
-      </div>
-
-      <div class="form-grid">
-        <!-- Дата -->
-        <div class="field-row">
-          <label>Дата</label>
-          <input type="date" v-model="workout.date" class="date-input" />
-        </div>
-
-        <!-- Группы мышц -->
-        <div class="field-row types-row">
-          <MuscleGroupSelect
-            :modelValue="workout.primaryType ?? ''"
-            @update:modelValue="workout.primaryType = $event"
-            label="Основная группа"
-          />
-          <MuscleGroupSelect
-            :modelValue="workout.secondaryType ?? ''"
-            @update:modelValue="workout.secondaryType = $event"
-            label="Дополнительная группа"
-            :disabledId="workout.primaryType ?? ''"
-          />
-        </div>
-
-        <!-- Описание -->
-        <div class="field-row">
-          <input
-            v-model="workout.description"
-            placeholder="Описание тренировки..."
-            class="desc-input"
-          />
-        </div>
-
-        <!-- Фото тренировки -->
-        <div class="field-row">
-          <label>Фото</label>
-          <PhotoAttach
-            :photoIds="workout.photoIds || []"
-            :thumbSize="64"
-            @update="workout.photoIds = $event"
-          />
-        </div>
-      </div>
+    <!-- Левая колонка: форма + упражнения.
+         fieldset[disabled] отключает все инпуты и кнопки в режиме просмотра -->
+    <fieldset class="col-main edit-scope" :class="{ readonly: !editMode }" :disabled="!editMode">
+      <WorkoutFormHeader
+        :isNew="isNew"
+        v-model:id="workout.id"
+        v-model:date="workout.date"
+        v-model:primaryType="workout.primaryType"
+        v-model:secondaryType="workout.secondaryType"
+        v-model:description="workout.description"
+        v-model:photoIds="workout.photoIds"
+      />
 
       <!-- Упражнения -->
-      <div class="entries">
-        <div
-          v-for="(entry, i) in workout.entries"
-          :key="entry.id"
-          class="entry-drag-wrap"
-          :class="{
-            'drag-src': dragSrc === i,
-            'drag-over': dragOver === i && dragSrc !== i,
-          }"
-          draggable="true"
-          @dragstart="onDragStart(i, $event)"
-          @dragover="onDragOver(i, $event)"
-          @drop="onDrop(i)"
-          @dragend="onDragEnd"
-        >
-          <div class="drag-handle" title="Перетащить"><GripVertical class="size-4" /></div>
-          <div class="entry-card-flex">
-            <ExerciseEntryCard
-              :entry="entry"
-              :index="i"
-              :muscleGroups="workout.muscleGroups"
-              :supersetLabel="getSupersetLabel(entry)"
-              @update="updateEntry(i, $event)"
-              @remove="removeEntry(i)"
-            />
-          </div>
-        </div>
-      </div>
+      <WorkoutEntryList
+        v-model:entries="workout.entries"
+        :muscleGroups="workout.muscleGroups"
+        :readonly="!editMode"
+      />
 
-      <div class="add-buttons">
+      <div class="add-buttons" v-if="editMode">
         <button class="btn" @click="addEntry">+ Упражнение</button>
         <button class="btn" @click="addSuperset">+ Суперсет</button>
       </div>
-    </div>
+    </fieldset>
 
     <!-- Правая колонка: фото мышц (sticky) -->
     <div class="col-photos">
@@ -339,11 +253,20 @@ onUnmounted(() => {
 
   </div>
 
-  <div class="save-bar" v-if="!loading">
-    <button class="btn btn-save" @click="save" :disabled="saving">
-      <Save v-if="!saving" class="size-4" />
-      {{ saving ? 'Сохраняю...' : 'Сохранить' }}
+  <div class="save-bar" v-if="!loading || workout.id > 0">
+    <button v-if="!editMode" class="btn btn-save btn-edit" @click="editMode = true">
+      <Pencil class="size-4" />
+      Редактировать
     </button>
+    <template v-else>
+      <div class="save-actions">
+        <button class="btn btn-cancel" @click="cancelEdit" :disabled="saving">Отмена</button>
+        <button class="btn btn-save" @click="save" :disabled="saving">
+          <Save v-if="!saving" class="size-4" />
+          {{ saving ? 'Сохраняю...' : 'Сохранить' }}
+        </button>
+      </div>
+    </template>
   </div>
 
   <div class="loading" v-else>Загрузка...</div>
@@ -355,7 +278,6 @@ onUnmounted(() => {
   display: flex;
   gap: 16px;
   align-items: flex-start;
-  padding-bottom: 70px;
 }
 
 .col-main {
@@ -384,94 +306,40 @@ onUnmounted(() => {
   text-align: center;
 }
 
-.editor-top {
-  margin-bottom: 20px;
-}
-
-.id-heading {
+.save-actions {
   display: flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 1.3rem;
-  font-weight: bold;
+  gap: 8px;
 }
 
-.id-label {
-  white-space: nowrap;
-  color: #ccc;
+.save-actions .btn-save {
+  flex: 1;
 }
 
-.id-input {
-  width: 72px;
-  background: transparent;
-  border: none;
-  border-bottom: 1px dashed #555;
-  color: #eee;
-  font-size: 1.3rem;
-  font-weight: bold;
-  font-family: inherit;
-  padding: 0 2px;
-  -moz-appearance: textfield;
-}
-
-.id-input::-webkit-outer-spin-button,
-.id-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-}
-
-.id-input:focus {
-  outline: none;
-  border-bottom-color: #5a8;
-}
-
-.form-grid {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 10px;
-  padding: 14px 16px;
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.field-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.field-row label {
-  font-size: 0.78rem;
-  color: #666;
-}
-
-.types-row {
-  flex-direction: row;
-  gap: 12px;
-}
-
-.date-input,
-.desc-input {
-  width: 100%;
-  padding: 7px 10px;
-  border: 1px solid #333;
+.btn-cancel {
+  padding: 11px 22px;
+  background: #252525;
+  border: 1px solid #444;
   border-radius: 6px;
-  background: #111;
-  color: #eee;
-  font-size: 0.9rem;
-  font-family: inherit;
+  color: #aaa;
+  font-size: 1rem;
+  cursor: pointer;
 }
 
-.date-input:focus,
-.desc-input:focus {
-  outline: none;
-  border-color: #5a8;
+.btn-cancel:hover {
+  background: #333;
 }
 
-.date-input {
-  width: auto;
+/* Кнопка «Редактировать» — отличается от зелёного «Сохранить» */
+.btn-edit {
+  background: #2a4a6a;
 }
+
+.btn-edit:hover {
+  background: #3a5a7a;
+}
+
+/* Стили режима просмотра (.edit-scope.readonly) — в assets/main.css:
+   они глобальные, т.к. стилизуют внутренности дочерних компонентов */
 
 .btn {
   padding: 8px 16px;
@@ -487,87 +355,30 @@ onUnmounted(() => {
   background: #333;
 }
 
-.btn-save {
-  width: 100%;
-  padding: 12px;
-  margin-top: 16px;
-  background: #2a7a4a;
-  border-color: #2a7a4a;
-  font-size: 1rem;
-  font-weight: bold;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.btn-save:hover {
-  background: #3a8a5a;
-}
-
-.btn-save:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.entries {
-  margin: 0 0 12px;
-}
-
-.entry-drag-wrap {
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-  transition: opacity 0.15s;
-}
-
-.entry-drag-wrap.drag-src {
-  opacity: 0.35;
-}
-
-.entry-drag-wrap.drag-over {
-  outline: 2px solid #5a8;
-  border-radius: 9px;
-}
-
-.drag-handle {
-  flex-shrink: 0;
-  font-size: 1.1rem;
-  color: #444;
-  cursor: grab;
-  padding: 8px 2px 0;
-  user-select: none;
-  line-height: 1;
-}
-
-.drag-handle:hover {
-  color: #888;
-}
-
-.entry-card-flex {
-  flex: 1;
-  min-width: 0;
-}
-
 .add-buttons {
   display: flex;
   gap: 8px;
 }
 
+/* Липнет к низу прокручиваемой панели — ширина панели любая,
+   в отличие от прежнего position: fixed с жёстким left: 320px.
+   Панель без нижнего паддинга, поэтому отрицательный маргин не нужен */
 .save-bar {
-  position: fixed;
+  position: sticky;
   bottom: 0;
-  right: 0;
-  left: 320px;
-  padding: 10px 24px;
+  margin: 12px -16px 0;
+  padding: 10px 16px;
   background: #121212;
   border-top: 1px solid #2a2a2a;
   z-index: 50;
 }
 
 .btn-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  max-width: 720px;
   padding: 11px;
   background: #2a7a4a;
   border: none;

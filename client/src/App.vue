@@ -8,9 +8,9 @@ import StatsView from '@/views/StatsView.vue'
 import CatalogView from '@/views/CatalogView.vue'
 import CalendarView from '@/views/CalendarView.vue'
 import ProgressSummary from '@/components/ProgressSummary.vue'
-import { Button } from '@/components/ui/button'
+import NavRail from '@/components/NavRail.vue'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { Dumbbell, LineChart, Library, CalendarDays } from 'lucide-vue-next'
+import { Dumbbell, LineChart } from 'lucide-vue-next'
 
 const catalogStore = useCatalogStore()
 const workoutStore = useWorkoutStore()
@@ -28,17 +28,23 @@ const isFullWidth = computed(() => FULL_WIDTH_TABS.has(activePanel.value))
 const RIGHT_PANEL_ROUTES = new Set(['new-workout', 'edit-workout', 'exercise-chart'])
 const hasRightContent = computed(() => RIGHT_PANEL_ROUTES.has(route.name as string))
 
+// Корневой маршрут каждой вкладки
+const TAB_ROUTES: Record<Tab, string> = {
+  workouts: 'list', stats: 'stats', catalog: 'catalog', calendar: 'calendar',
+}
+
+// Сравнение по route.name: клик по активной вкладке с подмаршрута
+// (редактор, график) возвращает на корневой маршрут вкладки
 function goTab(tab: Tab) {
-  if (activePanel.value === tab) return
-  if (tab === 'workouts') router.push({ name: 'list' })
-  else if (tab === 'stats') router.push({ name: 'stats' })
-  else if (tab === 'calendar') router.push({ name: 'calendar' })
-  else router.push({ name: 'catalog' })
+  const target = TAB_ROUTES[tab]
+  if (route.name === target) return
+  router.push({ name: target })
 }
 
 // ── Resizable панель ──
 const MIN_W = 240, MAX_W = 900
-const panelWidth = ref(Number(localStorage.getItem('gym.panelWidth')) || 320)
+const storedWidth = Number(localStorage.getItem('gym.panelWidth')) || 320
+const panelWidth = ref(Math.max(MIN_W, Math.min(MAX_W, storedWidth)))
 watch(panelWidth, (w) => localStorage.setItem('gym.panelWidth', String(w)))
 
 let dragging = false
@@ -70,47 +76,8 @@ onMounted(async () => {
 <template>
   <TooltipProvider :delay-duration="300">
   <div class="app-shell">
-    <!-- ─── Верхняя панель: лого + табы (всегда на одном месте) ─── -->
-    <header class="topbar">
-      <span class="logo">
-        <Dumbbell class="size-5 text-primary" />
-        <span>Gym+</span>
-      </span>
-      <nav class="flex items-center gap-1">
-        <Button
-          :variant="activePanel === 'workouts' ? 'secondary' : 'ghost'"
-          size="sm"
-          @click="goTab('workouts')"
-        >
-          <Dumbbell class="size-4" />
-          <span class="hidden sm:inline">Тренировки</span>
-        </Button>
-        <Button
-          :variant="activePanel === 'stats' ? 'secondary' : 'ghost'"
-          size="sm"
-          @click="goTab('stats')"
-        >
-          <LineChart class="size-4" />
-          <span class="hidden sm:inline">Прогресс</span>
-        </Button>
-        <Button
-          :variant="activePanel === 'catalog' ? 'secondary' : 'ghost'"
-          size="sm"
-          @click="goTab('catalog')"
-        >
-          <Library class="size-4" />
-          <span class="hidden sm:inline">Каталог</span>
-        </Button>
-        <Button
-          :variant="activePanel === 'calendar' ? 'secondary' : 'ghost'"
-          size="sm"
-          @click="goTab('calendar')"
-        >
-          <CalendarDays class="size-4" />
-          <span class="hidden sm:inline">Календарь</span>
-        </Button>
-      </nav>
-    </header>
+    <!-- ─── Левое меню: лого + вкладки ─── -->
+    <NavRail :active-tab="activePanel" @select="goTab" />
 
     <div class="app-layout">
       <!-- Левая панель: список -->
@@ -211,29 +178,7 @@ html, body {
 <style scoped>
 .app-shell {
   display: flex;
-  flex-direction: column;
   height: 100vh;
-}
-
-/* ─── Topbar ─── */
-.topbar {
-  flex-shrink: 0;
-  height: 52px;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 0 14px;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.05rem;
-  font-weight: 600;
-  flex-shrink: 0;
 }
 
 .app-layout {
@@ -288,23 +233,6 @@ html, body {
   bottom: 0;
 }
 
-.ptab {
-  width: 32px;
-  height: 28px;
-  border: 1px solid #333;
-  border-radius: 6px;
-  background: #1a1a1a;
-  color: #555;
-  cursor: pointer;
-  font-size: 0.95rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, border-color 0.15s;
-}
-.ptab:hover { border-color: #5a8; color: #ccc; }
-.ptab.active { border-color: #5a8; background: #1a2a22; color: #5a8; }
-
 .panel-list-body {
   flex: 1;
   overflow-y: auto;
@@ -315,7 +243,9 @@ html, body {
 .panel-editor {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 16px;
+  /* Без нижнего паддинга: sticky-бар «Сохранить» в редакторе
+     должен вставать вплотную к нижней кромке без зазора */
+  padding: 20px 16px 0;
   min-width: 0;
 }
 
@@ -343,12 +273,15 @@ html, body {
 }
 
 .editor-empty-icon {
-  font-size: 2.5rem;
   margin-bottom: 12px;
 }
 
 /* ─── Mobile ─── */
 @media (max-width: 600px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
   .app-layout {
     flex-direction: column;
   }
@@ -363,7 +296,7 @@ html, body {
   .resize-handle { display: none; }
 
   .panel-editor {
-    padding: 12px 14px;
+    padding: 12px 14px 0;
   }
 }
 </style>

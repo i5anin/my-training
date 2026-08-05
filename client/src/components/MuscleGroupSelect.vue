@@ -44,6 +44,8 @@ async function confirm() {
   const name = newName.value.trim()
   if (!name) return cancel()
   const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-zа-яё0-9-]/gi, '')
+  // Имя из одних спецсимволов даёт пустой id — не создаём группу-призрак
+  if (!id) return cancel()
   await catalogStore.addMuscleGroup({ id, label: name })
   emit('update:modelValue', id)
   newName.value = ''
