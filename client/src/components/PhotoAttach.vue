@@ -3,6 +3,7 @@ import { onUnmounted, ref, watch } from 'vue'
 import { nanoid } from 'nanoid'
 import { savePhoto, getPhotoUrl, deletePhoto } from '@/db'
 import { Camera, X } from 'lucide-vue-next'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 const props = withDefaults(defineProps<{ photoIds: string[]; thumbSize?: number }>(), {
   thumbSize: 32,
@@ -105,7 +106,12 @@ function drawToBlob(img: HTMLImageElement, maxSize: number): Promise<Blob> {
         class="photo-thumb"
         :style="{ width: thumbSize + 'px', height: thumbSize + 'px' }"
       >
-        <img :src="previews.get(id)" @click="openLightbox(id)" title="Открыть в полный размер" />
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <img :src="previews.get(id)" @click="openLightbox(id)" />
+          </TooltipTrigger>
+          <TooltipContent>Открыть в полный размер</TooltipContent>
+        </Tooltip>
         <button class="photo-remove" @click="removePhoto(id)"><X class="size-3" /></button>
       </div>
     </div>

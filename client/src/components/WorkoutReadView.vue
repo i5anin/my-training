@@ -85,16 +85,19 @@ function exName(id: string) {
             :class="{ warmup: colsByEntry[i]?.[n - 1]?.main.isWarmup }"
           >
             <template v-if="colsByEntry[i]?.[n - 1]">
-              <div>
-                {{ colsByEntry[i]![n - 1]!.main.weight
-                }}<span class="rv-x">×</span>{{ colsByEntry[i]![n - 1]!.main.reps }}
+              <div class="rv-set-val">
+                <span class="rv-w">{{ colsByEntry[i]![n - 1]!.main.weight }}</span>
+                <span class="rv-x">×</span>
+                <span class="rv-r">{{ colsByEntry[i]![n - 1]!.main.reps }}</span>
               </div>
               <div
                 v-for="(b, bi) in colsByEntry[i]![n - 1]!.burnouts"
                 :key="bi"
-                class="rv-burnout"
+                class="rv-burnout rv-set-val"
               >
-                {{ b.weight }}<span class="rv-x">×</span>{{ b.reps }}
+                <span class="rv-w">{{ b.weight }}</span>
+                <span class="rv-x">×</span>
+                <span class="rv-r">{{ b.reps }}</span>
               </div>
             </template>
           </td>
@@ -212,9 +215,25 @@ function exName(id: string) {
   font-variant-numeric: tabular-nums;
 }
 
+/* Вес вправо, повторы влево — крестики стоят в одну вертикаль */
+.rv-set-val {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.rv-w {
+  min-width: 4ch;
+  text-align: right;
+}
+
+.rv-r {
+  min-width: 2.5ch;
+  text-align: left;
+}
+
 .rv-x {
   color: #555;
-  padding: 0 2px;
+  padding: 0 3px;
 }
 
 /* Добивка — компактная плашка под основным подходом */

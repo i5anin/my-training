@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useCatalogStore } from '@/stores/catalogStore'
 import MgIcon from '@/components/MgIcon.vue'
 import { ChevronDown, ChevronUp, X, Plus } from 'lucide-vue-next'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { plural, slug } from '@/composables/textFormat'
 import { useCatalogUsage } from '@/composables/useCatalogUsage'
 import type { Exercise } from '@/types'
@@ -124,18 +125,29 @@ function toggleExpand(id: string) {
             @blur="updateExName(ex, $event)"
             @keydown.enter="($event.target as HTMLInputElement).blur()"
           />
-          <button
-            class="ex-mgs-btn"
-            :title="ex.muscleGroups.map(id => catalogStore.muscleGroups.find(m=>m.id===id)?.label ?? id).join(', ')"
-            @click="toggleExpand(ex.id)"
-          >
-            <MgIcon v-for="id in ex.muscleGroups" :key="id" :id="id" :size="18" />
-            <component :is="expandedExId === ex.id ? ChevronUp : ChevronDown" class="size-3 text-muted-foreground" />
-          </button>
-          <span class="ex-usage" :title="`Использований: ${exerciseUsage.get(ex.id) ?? 0}`">
-            {{ exerciseUsage.get(ex.id) ?? 0 }}×
-          </span>
-          <button class="del-btn" title="Удалить" @click="deleteEx(ex)"><X class="size-3.5" /></button>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <button class="ex-mgs-btn" @click="toggleExpand(ex.id)">
+                <MgIcon v-for="id in ex.muscleGroups" :key="id" :id="id" :size="18" />
+                <component :is="expandedExId === ex.id ? ChevronUp : ChevronDown" class="size-3 text-muted-foreground" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {{ ex.muscleGroups.map(id => catalogStore.muscleGroups.find(m => m.id === id)?.label ?? id).join(', ') }}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <span class="ex-usage">{{ exerciseUsage.get(ex.id) ?? 0 }}×</span>
+            </TooltipTrigger>
+            <TooltipContent>Использований: {{ exerciseUsage.get(ex.id) ?? 0 }}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <button class="del-btn" @click="deleteEx(ex)"><X class="size-3.5" /></button>
+            </TooltipTrigger>
+            <TooltipContent>Удалить</TooltipContent>
+          </Tooltip>
         </div>
         <!-- Раскрытая часть: переключатели групп -->
         <div v-if="expandedExId === ex.id" class="ex-edit">

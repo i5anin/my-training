@@ -6,6 +6,7 @@ import { useWorkoutStore } from '@/stores/workoutStore'
 import { useCatalogStore } from '@/stores/catalogStore'
 import { getMuscleGroupIcon, getMuscleGroupImage } from '@/constants/muscleGroupIcons'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import type { Workout } from '@/types'
 
 const router = useRouter()
@@ -117,26 +118,35 @@ function goToday() { year.value = dayjs().year() }
           <span v-for="wd in WEEKDAYS" :key="wd">{{ wd }}</span>
         </div>
         <div class="cal-days">
-          <div
-            v-for="(cell, ci) in m.cells"
-            :key="ci"
-            class="cal-day"
-            :class="{
-              'cal-day-empty': !cell.inMonth,
-              'cal-day-today': cell.isToday,
-              'cal-day-has': cell.workouts.length > 0,
-            }"
-            :title="dayTitle(cell)"
-            @click="openDay(cell)"
-          >
-            <span v-if="cell.inMonth" class="cal-day-num">{{ cell.day }}</span>
-            <div v-if="cell.workouts.length" class="cal-day-icons">
-              <template v-for="ic in mgIconsFor(cell.workouts)" :key="ic.id">
-                <img v-if="ic.image" :src="ic.image" :alt="ic.id" class="cal-icon-img" />
-                <span v-else class="cal-icon-emoji">{{ getMuscleGroupIcon(ic.id) }}</span>
-              </template>
+          <!-- Дни с тренировками — с тултипом; пустые без него,
+               иначе на 500+ ячеек создавались бы лишние экземпляры -->
+          <template v-for="(cell, ci) in m.cells" :key="ci">
+            <Tooltip v-if="cell.workouts.length">
+              <TooltipTrigger as-child>
+                <div
+                  class="cal-day cal-day-has"
+                  :class="{ 'cal-day-today': cell.isToday }"
+                  @click="openDay(cell)"
+                >
+                  <span class="cal-day-num">{{ cell.day }}</span>
+                  <div class="cal-day-icons">
+                    <template v-for="ic in mgIconsFor(cell.workouts)" :key="ic.id">
+                      <img v-if="ic.image" :src="ic.image" :alt="ic.id" class="cal-icon-img" />
+                      <span v-else class="cal-icon-emoji">{{ getMuscleGroupIcon(ic.id) }}</span>
+                    </template>
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent class="cal-tip">{{ dayTitle(cell) }}</TooltipContent>
+            </Tooltip>
+            <div
+              v-else
+              class="cal-day"
+              :class="{ 'cal-day-empty': !cell.inMonth, 'cal-day-today': cell.isToday }"
+            >
+              <span v-if="cell.inMonth" class="cal-day-num">{{ cell.day }}</span>
             </div>
-          </div>
+          </template>
         </div>
       </div>
     </div>

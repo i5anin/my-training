@@ -7,6 +7,7 @@ import {
   GAP_WARN_DAYS, type WorkoutListRow,
 } from '@/composables/workoutFormat'
 import { Copy, X } from 'lucide-vue-next'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 const props = defineProps<{
   workout: WorkoutListRow
@@ -44,43 +45,62 @@ const totalSets = computed(() => setsCount(props.workout.entries))
 <template>
   <tr class="wrow" :class="{ active }" @click="$emit('edit')">
     <td class="td-id">
-      #{{ workout.id }}<span
-        v-if="duplicates?.length"
-        class="dup-badge"
-        :title="dupTitle"
-      >⚠</span>
+      #{{ workout.id }}<Tooltip v-if="duplicates?.length">
+        <TooltipTrigger as-child><span class="dup-badge">⚠</span></TooltipTrigger>
+        <TooltipContent>{{ dupTitle }}</TooltipContent>
+      </Tooltip>
     </td>
-    <td
-      class="td-date"
-      :class="{ 'date-unconfirmed': dateUnconfirmed }"
-      :title="dateUnconfirmed ? 'Дата не подтверждена (заглушка при переносе из тетради)' : undefined"
-    >
-      <div>{{ formatDate(workout.date) }}<span v-if="dateUnconfirmed" class="date-q">?</span></div>
-      <div
-        class="td-gap"
-        v-if="workout.gapDays != null"
-        :class="{ 'gap-warn': workout.gapDays > GAP_WARN_DAYS }"
-      >{{ fmtGap(workout.gapDays) }}</div>
-    </td>
-    <td class="td-mg" :title="mgTooltip">
-      <span v-for="id in (workout.muscleGroups || [])" :key="id" class="mg-icon-wrap">
-        <img v-if="getMuscleGroupImage(id)" :src="getMuscleGroupImage(id)!" :alt="id" class="mg-icon-img" />
-        <span v-else>{{ getMuscleGroupIcon(id) }}</span>
-      </span>
-    </td>
-    <td
-      class="td-ex"
-      :title="`Упражнений: ${(workout.entries || []).length} · подходов: ${totalSets}`"
-    >
-      {{ (workout.entries || []).length }}<span class="td-sets" v-if="totalSets"> / {{ totalSets }}</span>
-    </td>
+    <Tooltip :disabled="!dateUnconfirmed">
+      <TooltipTrigger as-child>
+        <td class="td-date" :class="{ 'date-unconfirmed': dateUnconfirmed }">
+          <div>{{ formatDate(workout.date) }}<span v-if="dateUnconfirmed" class="date-q">?</span></div>
+          <div
+            class="td-gap"
+            v-if="workout.gapDays != null"
+            :class="{ 'gap-warn': workout.gapDays > GAP_WARN_DAYS }"
+          >{{ fmtGap(workout.gapDays) }}</div>
+        </td>
+      </TooltipTrigger>
+      <TooltipContent>Дата не подтверждена (заглушка при переносе из тетради)</TooltipContent>
+    </Tooltip>
+    <Tooltip>
+      <TooltipTrigger as-child>
+        <td class="td-mg">
+          <span v-for="id in (workout.muscleGroups || [])" :key="id" class="mg-icon-wrap">
+            <img v-if="getMuscleGroupImage(id)" :src="getMuscleGroupImage(id)!" :alt="id" class="mg-icon-img" />
+            <span v-else>{{ getMuscleGroupIcon(id) }}</span>
+          </span>
+        </td>
+      </TooltipTrigger>
+      <TooltipContent>{{ mgTooltip }}</TooltipContent>
+    </Tooltip>
+    <Tooltip>
+      <TooltipTrigger as-child>
+        <td class="td-ex">
+          {{ (workout.entries || []).length }}<span class="td-sets" v-if="totalSets"> / {{ totalSets }}</span>
+        </td>
+      </TooltipTrigger>
+      <TooltipContent>
+        Упражнений: {{ (workout.entries || []).length }} · подходов: {{ totalSets }}
+      </TooltipContent>
+    </Tooltip>
     <td class="td-time">
       <span v-if="workout.totalEditMs && workout.totalEditMs > 0" class="time-badge">{{ fmtDuration(workout.totalEditMs) }}</span>
       <span v-else class="time-none">—</span>
     </td>
     <td class="td-act" @click.stop>
-      <button class="act-btn act-dup" title="Дублировать" @click="$emit('duplicate')"><Copy class="size-3.5" /></button>
-      <button class="act-btn act-del" title="Удалить" @click="$emit('remove')"><X class="size-3.5" /></button>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button class="act-btn act-dup" @click="$emit('duplicate')"><Copy class="size-3.5" /></button>
+        </TooltipTrigger>
+        <TooltipContent>Дублировать</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button class="act-btn act-del" @click="$emit('remove')"><X class="size-3.5" /></button>
+        </TooltipTrigger>
+        <TooltipContent>Удалить</TooltipContent>
+      </Tooltip>
     </td>
   </tr>
 </template>

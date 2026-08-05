@@ -25,7 +25,7 @@ watch(navExpanded, (v) => localStorage.setItem('gym.navExpanded', v ? '1' : '0')
 
 <template>
   <aside class="navrail" :class="{ expanded: navExpanded }">
-    <div class="logo" title="Gym+">
+    <div class="logo">
       <Dumbbell class="size-6 text-primary" />
       <span class="nav-label">Gym+</span>
     </div>

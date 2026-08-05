@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useCatalogStore } from '@/stores/catalogStore'
 import MgIcon from '@/components/MgIcon.vue'
 import { X, Plus } from 'lucide-vue-next'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { plural, slug } from '@/composables/textFormat'
 import { useCatalogUsage } from '@/composables/useCatalogUsage'
 import type { MuscleGroup } from '@/types'
@@ -67,18 +68,31 @@ async function deleteGroup(g: MuscleGroup) {
 
     <!-- Список -->
     <div class="mg-list">
-      <div v-for="g in catalogStore.muscleGroups" :key="g.id" class="mg-item" :title="'id: ' + g.id">
-        <MgIcon :id="g.id" :size="22" />
+      <div v-for="g in catalogStore.muscleGroups" :key="g.id" class="mg-item">
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <span class="mg-icon-hit"><MgIcon :id="g.id" :size="22" /></span>
+          </TooltipTrigger>
+          <TooltipContent>id: {{ g.id }}</TooltipContent>
+        </Tooltip>
         <input
           class="mg-label-input"
           :value="g.label"
           @blur="updateGroupLabel(g, $event)"
           @keydown.enter="($event.target as HTMLInputElement).blur()"
         />
-        <span class="mg-usage" :title="`Использований: ${groupUsage.get(g.id) ?? 0}`">
-          {{ groupUsage.get(g.id) ?? 0 }}×
-        </span>
-        <button class="del-btn" title="Удалить" @click="deleteGroup(g)"><X class="size-3.5" /></button>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <span class="mg-usage">{{ groupUsage.get(g.id) ?? 0 }}×</span>
+          </TooltipTrigger>
+          <TooltipContent>Использований: {{ groupUsage.get(g.id) ?? 0 }}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button class="del-btn" @click="deleteGroup(g)"><X class="size-3.5" /></button>
+          </TooltipTrigger>
+          <TooltipContent>Удалить</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   </div>

@@ -6,6 +6,7 @@ import { useCatalogStore } from '@/stores/catalogStore'
 import type { SetRow } from '@/types'
 import SparkCell from '@/components/SparkCell.vue'
 import MgIcon from '@/components/MgIcon.vue'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 const router = useRouter()
 const workoutStore = useWorkoutStore()
@@ -103,12 +104,17 @@ const metric = ref<'1rm' | 'vol'>('1rm')
           class="mgf" :class="{ active: filterMg === 'all' }"
           @click="filterMg = 'all'"
         >Все</button>
-        <button
-          v-for="mg in activeMgs" :key="mg"
-          class="mgf" :class="{ active: filterMg === mg }"
-          @click="filterMg = filterMg === mg ? 'all' : mg"
-          :title="catalogStore.muscleGroups.find(m => m.id === mg)?.label ?? mg"
-        ><MgIcon :id="mg" :size="16" /></button>
+        <Tooltip v-for="mg in activeMgs" :key="mg">
+          <TooltipTrigger as-child>
+            <button
+              class="mgf" :class="{ active: filterMg === mg }"
+              @click="filterMg = filterMg === mg ? 'all' : mg"
+            ><MgIcon :id="mg" :size="16" /></button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {{ catalogStore.muscleGroups.find(m => m.id === mg)?.label ?? mg }}
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
 

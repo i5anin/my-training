@@ -33,4 +33,20 @@ export default tseslint.config(
       'max-lines': ['error', { max: 350, skipBlankLines: true, skipComments: true }],
     },
   },
+  {
+    files: ['**/*.vue'],
+    rules: {
+      // Нативные подсказки браузера запрещены: серые, с задержкой,
+      // не стилизуются и не работают на тач-устройствах.
+      // Вместо них — компонент Tooltip (@/components/ui/tooltip)
+      'vue/no-restricted-static-attribute': ['error', {
+        key: 'title',
+        message: 'Нативный title запрещён — оберните элемент в Tooltip/TooltipTrigger.',
+      }],
+      'vue/no-restricted-v-bind': ['error', {
+        argument: 'title',
+        message: 'Нативный :title запрещён — оберните элемент в Tooltip/TooltipTrigger.',
+      }],
+    },
+  },
 )

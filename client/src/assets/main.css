@@ -70,3 +70,9 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
 }
 input[type="number"] { -moz-appearance: textfield; }
+
+/* Тултип дня календаря: перечисляет тренировки построчно.
+   Глобально, т.к. содержимое тултипа рендерится в портале body */
+.cal-tip {
+  white-space: pre-line;
+}

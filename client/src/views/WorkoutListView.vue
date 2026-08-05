@@ -7,6 +7,7 @@ import { deleteWorkout, exportAll, importAll } from '@/db'
 import { formatDate, gapDays, type WorkoutListRow } from '@/composables/workoutFormat'
 import WorkoutRow from '@/components/WorkoutRow.vue'
 import { Upload, Download, Clock, Plus } from 'lucide-vue-next'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import type { Workout } from '@/types'
 import dayjs from 'dayjs'
 
@@ -160,8 +161,18 @@ async function doImport() {
       <button class="btn btn-primary btn-new" @click="router.push({ name: 'new-workout' })">
         <Plus class="size-4" /> Тренировка
       </button>
-      <button class="btn btn-sm" title="Экспорт" @click="doExport"><Download class="size-4" /></button>
-      <button class="btn btn-sm" title="Импорт" @click="doImport"><Upload class="size-4" /></button>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button class="btn btn-sm" @click="doExport"><Download class="size-4" /></button>
+        </TooltipTrigger>
+        <TooltipContent>Экспорт в файл</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button class="btn btn-sm" @click="doImport"><Upload class="size-4" /></button>
+        </TooltipTrigger>
+        <TooltipContent>Импорт из файла</TooltipContent>
+      </Tooltip>
     </div>
 
     <div v-if="filtered.length === 0" class="empty">

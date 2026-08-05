@@ -5,6 +5,7 @@ import { useCatalogStore } from '@/stores/catalogStore'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { suggestExercises } from '@/suggestions'
 import { TrendingUp } from 'lucide-vue-next'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 const router = useRouter()
 
@@ -67,12 +68,15 @@ function addCustom() {
 
 <template>
   <div class="exercise-selector">
-    <button
-      v-if="props.modelValue"
-      class="chart-btn"
-      title="График прогресса"
-      @click.stop="router.push({ name: 'exercise-chart', params: { id: props.modelValue } })"
-    ><TrendingUp class="size-4" /></button>
+    <Tooltip v-if="props.modelValue">
+      <TooltipTrigger as-child>
+        <button
+          class="chart-btn"
+          @click.stop="router.push({ name: 'exercise-chart', params: { id: props.modelValue } })"
+        ><TrendingUp class="size-4" /></button>
+      </TooltipTrigger>
+      <TooltipContent>График прогресса</TooltipContent>
+    </Tooltip>
     <input
       ref="inputEl"
       :value="isOpen ? query : selectedName"

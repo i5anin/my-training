@@ -368,7 +368,9 @@ onUnmounted(() => {
 .save-bar {
   position: sticky;
   bottom: 0;
+  /* auto — прижимает бар к низу панели, когда контента мало */
   margin: 12px -16px 0;
+  margin-top: auto;
   padding: 10px 16px;
   background: #121212;
   border-top: 1px solid #2a2a2a;

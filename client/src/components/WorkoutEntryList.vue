@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { ExerciseEntry } from '@/types'
 import ExerciseEntryCard from '@/components/ExerciseEntryCard.vue'
 import { GripVertical } from 'lucide-vue-next'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 withDefaults(defineProps<{ muscleGroups: string[]; readonly?: boolean }>(), {
   readonly: false,
@@ -75,7 +76,12 @@ function getSupersetLabel(entry: ExerciseEntry): string | undefined {
       @drop="onDrop(i)"
       @dragend="onDragEnd"
     >
-      <div v-if="!readonly" class="drag-handle" title="Перетащить"><GripVertical class="size-4" /></div>
+      <Tooltip v-if="!readonly">
+        <TooltipTrigger as-child>
+          <div class="drag-handle"><GripVertical class="size-4" /></div>
+        </TooltipTrigger>
+        <TooltipContent>Перетащить</TooltipContent>
+      </Tooltip>
       <div class="entry-card-flex">
         <ExerciseEntryCard
           :entry="entry"

@@ -9,7 +9,7 @@ import CatalogView from '@/views/CatalogView.vue'
 import CalendarView from '@/views/CalendarView.vue'
 import ProgressSummary from '@/components/ProgressSummary.vue'
 import NavRail from '@/components/NavRail.vue'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Dumbbell, LineChart } from 'lucide-vue-next'
 
 const catalogStore = useCatalogStore()
@@ -95,12 +95,12 @@ onMounted(async () => {
       </aside>
 
       <!-- Resize handle (везде кроме каталога/календаря) -->
-      <div
-        v-if="!isFullWidth"
-        class="resize-handle"
-        @mousedown="startDrag"
-        title="Тяни чтобы изменить ширину"
-      ></div>
+      <Tooltip v-if="!isFullWidth">
+        <TooltipTrigger as-child>
+          <div class="resize-handle" @mousedown="startDrag"></div>
+        </TooltipTrigger>
+        <TooltipContent side="right">Тяни чтобы изменить ширину</TooltipContent>
+      </Tooltip>
 
       <!-- Правая панель: редактор / графики (везде кроме каталога/календаря) -->
       <main v-if="!isFullWidth" class="panel-editor">
@@ -240,24 +240,27 @@ html, body {
 }
 
 /* ─── Правая панель ─── */
+/* Flex-колонка: бар «Сохранить/Редактировать» в редакторе прижимается
+   к нижней кромке (margin-top: auto), даже если контента мало */
 .panel-editor {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
-  /* Без нижнего паддинга: sticky-бар «Сохранить» в редакторе
-     должен вставать вплотную к нижней кромке без зазора */
+  /* Без нижнего паддинга: sticky-бар должен вставать вплотную к кромке */
   padding: 20px 16px 0;
   min-width: 0;
 }
 
 .editor-empty {
-  height: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .stats-landing {
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 20px;

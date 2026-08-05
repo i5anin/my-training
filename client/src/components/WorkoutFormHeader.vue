@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import MuscleGroupSelect from '@/components/MuscleGroupSelect.vue'
 import PhotoAttach from '@/components/PhotoAttach.vue'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 defineProps<{ isNew: boolean }>()
 
@@ -16,13 +17,12 @@ const photoIds = defineModel<string[]>('photoIds')
   <div class="editor-top">
     <div class="id-heading">
       <span class="id-label">{{ isNew ? 'Новая тренировка' : 'Тренировка' }} #</span>
-      <input
-        type="number"
-        class="id-input"
-        v-model.number="id"
-        min="1"
-        title="Номер тренировки"
-      />
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <input type="number" class="id-input" v-model.number="id" min="1" />
+        </TooltipTrigger>
+        <TooltipContent>Номер тренировки</TooltipContent>
+      </Tooltip>
     </div>
   </div>
 
