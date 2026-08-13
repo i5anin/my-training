@@ -2,17 +2,18 @@
 import { ref, watch } from 'vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
-  Dumbbell, LineChart, Library, CalendarDays,
+  Dumbbell, LineChart, Library, CalendarDays, ClipboardList,
   ChevronsLeft, ChevronsRight,
 } from 'lucide-vue-next'
 
-type Tab = 'workouts' | 'stats' | 'catalog' | 'calendar'
+type Tab = 'workouts' | 'stats' | 'catalog' | 'calendar' | 'programs'
 
 const NAV_TABS = [
   { tab: 'workouts', label: 'Тренировки', icon: Dumbbell },
   { tab: 'stats', label: 'Прогресс', icon: LineChart },
   { tab: 'catalog', label: 'Каталог', icon: Library },
   { tab: 'calendar', label: 'Календарь', icon: CalendarDays },
+  { tab: 'programs', label: 'Программы', icon: ClipboardList },
 ] as const
 
 defineProps<{ activeTab: Tab }>()

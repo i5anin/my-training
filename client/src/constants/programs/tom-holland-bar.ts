@@ -1,0 +1,86 @@
+import type { Program } from './types'
+
+/** Том Холланд, вариант на турнике и брусьях — только собственный вес */
+export const tomHollandBar: Program = {
+  id: 'tom-holland-bar',
+  author: 'Том Холланд · турник',
+  title: 'Только турник, брусья и пол',
+  subtitle: 'Тот же принцип — база и много собственного веса, но без железа',
+  daysPerWeek: 4,
+  split: '4 дня: тяга · жим · ноги и кондиция · круговая на всё тело',
+  level: 'новичок',
+  goal: 'Сухая масса на собственном весе, контроль тела',
+  spineSafe: true,
+  spineNote: 'Штанги на плечах нет, вис разгружает позвоночник. Но есть прыжки '
+    + '(скакалка, бёрпи) — при обострении заменить на ходьбу или велотренажёр.',
+  source: 'Калистеническая часть подготовки к «Человеку-пауку»',
+  notes: [
+    'Прогрессия — повторы, затем усложнение техники (пауза, медленный негатив, вес на поясе).',
+    'Не тянутся подтягивания — начинать с австралийских и негативов.',
+    'Отдых 60–90 сек, в круговой день — 30 сек между упражнениями.',
+  ],
+  days: [
+    {
+      id: 'thb-d1',
+      title: 'День 1 — Тяга (турник)',
+      primaryType: 'back',
+      secondaryType: 'arms',
+      exercises: [
+        { exerciseId: 'pull-ups', name: 'Подтягивания', muscleGroups: ['back', 'arms'], sets: 5, reps: 8 },
+        { exerciseId: 'chin-ups', name: 'Подтягивания обратным хватом',
+          muscleGroups: ['back', 'arms'], sets: 4, reps: 8 },
+        { exerciseId: 'australian-pull-up', name: 'Австралийские подтягивания',
+          muscleGroups: ['back', 'arms'], sets: 3, reps: 12,
+          note: 'Низкая перекладина, корпус в линию' },
+        { exerciseId: 'leg-raise', name: 'Подъемы ног', muscleGroups: ['core'], sets: 3, reps: 12,
+          note: 'В висе' },
+      ],
+    },
+    {
+      id: 'thb-d2',
+      title: 'День 2 — Жим (брусья и пол)',
+      primaryType: 'chest',
+      secondaryType: 'shoulders',
+      exercises: [
+        { exerciseId: 'dips', name: 'Брусья', muscleGroups: ['chest', 'arms'], sets: 5, reps: 10 },
+        { exerciseId: 'push-ups', name: 'Отжимания', muscleGroups: ['chest', 'arms'], sets: 4, reps: 20 },
+        { exerciseId: 'pike-push-ups', name: 'Отжимания щучкой',
+          muscleGroups: ['shoulders'], sets: 4, reps: 10, note: 'Замена жима на плечи' },
+        { exerciseId: 'diamond-push-ups', name: 'Отжимания узко (ромбом)',
+          muscleGroups: ['arms', 'chest'], sets: 3, reps: 12 },
+        { exerciseId: 'plank', name: 'Планка', muscleGroups: ['core'], sets: 3, reps: 60,
+          note: 'Повторы = секунды' },
+      ],
+    },
+    {
+      id: 'thb-d3',
+      title: 'День 3 — Ноги и кондиция',
+      primaryType: 'legs',
+      secondaryType: 'cardio',
+      exercises: [
+        { exerciseId: 'squat', name: 'Приседания', muscleGroups: ['legs'], sets: 4, reps: 25,
+          note: 'Собственный вес, без штанги' },
+        { exerciseId: 'lunges', name: 'Выпады', muscleGroups: ['legs'], sets: 3, reps: 15 },
+        { exerciseId: 'step-up', name: 'Зашагивания на платформу', muscleGroups: ['legs'], sets: 3, reps: 12 },
+        { exerciseId: 'calf-raise', name: 'Подъемы на носки', muscleGroups: ['legs'], sets: 4, reps: 25 },
+        { exerciseId: 'jump-rope', name: 'Скакалка', muscleGroups: ['cardio', 'legs'], sets: 3, reps: 180,
+          note: 'Повторы = секунды' },
+      ],
+    },
+    {
+      id: 'thb-d4',
+      title: 'День 4 — Круговая на всё тело',
+      primaryType: 'core',
+      secondaryType: 'cardio',
+      exercises: [
+        { exerciseId: 'pull-ups', name: 'Подтягивания', muscleGroups: ['back', 'arms'], sets: 4, reps: 6,
+          note: '4 круга подряд, отдых только после круга' },
+        { exerciseId: 'push-ups', name: 'Отжимания', muscleGroups: ['chest', 'arms'], sets: 4, reps: 15 },
+        { exerciseId: 'dips', name: 'Брусья', muscleGroups: ['chest', 'arms'], sets: 4, reps: 10 },
+        { exerciseId: 'burpee', name: 'Бёрпи', muscleGroups: ['cardio', 'legs'], sets: 4, reps: 15 },
+        { exerciseId: 'leg-raise', name: 'Подъемы ног', muscleGroups: ['core'], sets: 3, reps: 15 },
+        { exerciseId: 'crunch', name: 'Скручивания', muscleGroups: ['core'], sets: 3, reps: 25 },
+      ],
+    },
+  ],
+}

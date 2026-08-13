@@ -26,6 +26,12 @@ const router = createRouter({
     // Calendar tab
     { path: '/calendar', name: 'calendar', component: Stub, meta: { tab: 'calendar' } },
 
+    // Programs tab
+    { path: '/programs', name: 'programs', component: Stub, meta: { tab: 'programs' } },
+
+    // Anomalies tab
+    { path: '/anomalies', name: 'anomalies', component: Stub, meta: { tab: 'anomalies' } },
+
     // Неизвестный URL — на список тренировок
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
