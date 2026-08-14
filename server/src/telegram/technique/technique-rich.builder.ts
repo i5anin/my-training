@@ -66,10 +66,26 @@ export class TechniqueRichBuilder {
     }
 
     blocks.push(this.paramsLine(line, technique));
+
     // Плоские списки вместо details: сворачиваемый блок и чекбоксы
     // на клиенте показали только заголовок, текст оставался скрытым
-    blocks.push(...this.section('Как делать', technique.cues, 'note'));
+    blocks.push(...this.section('Настройка снаряда', technique.setup, 'note'));
+    blocks.push(...this.section('Исходное положение', technique.start, 'note'));
+    blocks.push(...this.section('Выполнение', technique.steps, 'note'));
+    blocks.push(
+      ...this.lines([
+        ['Дыхание', technique.breathing],
+        ['Ощущение', technique.feel],
+        ['Разминка', technique.warmup],
+      ]),
+    );
     blocks.push(...this.section('Ошибки', technique.mistakes, 'fire'));
+    blocks.push(
+      ...this.lines([
+        ['Верный вес', technique.check],
+        ['Прогрессия', technique.progression],
+      ]),
+    );
 
     if (technique.spine) {
       // Без credit: клиент печатает его отдельной строкой «спина» под цитатой
@@ -163,6 +179,14 @@ export class TechniqueRichBuilder {
       timeZone: 'UTC',
     }).format(new Date(Date.UTC(year, month - 1, day)));
     return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}, ${weekday}`;
+  }
+
+  /** Однострочные пункты «Заголовок: значение» */
+  private lines(pairs: [string, string][]): Block[] {
+    return pairs.map(([title, value]) => ({
+      type: 'paragraph',
+      text: [{ type: 'bold', text: `${title}: ` }, value],
+    }));
   }
 
   /** Раздел: подзаголовок и плоский список — виден без раскрытия */

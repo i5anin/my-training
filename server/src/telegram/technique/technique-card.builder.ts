@@ -42,7 +42,9 @@ export class TechniqueCardBuilder {
       '',
       '<b>Как делать</b>',
     ];
-    blocks.push(...technique.cues.map((c) => `• ${escapeHtml(c)}`));
+    // Подпись к фото ограничена 1024 символами, поэтому здесь только
+    // само движение; полная инструкция уходит rich-сообщением
+    blocks.push(...technique.steps.map((c) => `• ${escapeHtml(c)}`));
 
     const withMistakes = [...blocks, '', '<b>Ошибки</b>'];
     withMistakes.push(...technique.mistakes.map((m) => `• ${escapeHtml(m)}`));
