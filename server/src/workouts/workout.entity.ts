@@ -27,6 +27,13 @@ export class Workout {
   @Column({ nullable: true })
   secondaryType: string;
 
+  /**
+   * Запись создана заранее как план: веса проставлены, работа ещё не
+   * сделана. Снимается, когда тренировка отработана.
+   */
+  @Column({ nullable: true })
+  isPlan: boolean;
+
   @Column({ nullable: true })
   createdAt: string;
 
