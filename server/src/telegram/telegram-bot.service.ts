@@ -372,9 +372,15 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
         workoutId,
         exerciseId: line.exerciseId,
       });
-      const photo = this.media.photoForGroups(line.muscleGroups);
+      const found = this.media.forExercise(line.exerciseId, line.muscleGroups);
+      const photo = found?.file ?? null;
       const rich = this.config.useRich
-        ? this.richCards.build(line, digest, photo ?? undefined)
+        ? this.richCards.build(
+            line,
+            digest,
+            photo ?? undefined,
+            found ?? undefined,
+          )
         : null;
       const variant = rich ? 'rich' : photo ? 'photo' : 'text';
 

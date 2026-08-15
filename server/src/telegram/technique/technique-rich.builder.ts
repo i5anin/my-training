@@ -26,6 +26,7 @@ export class TechniqueRichBuilder {
     line: ExerciseLine,
     digest: WorkoutDigest,
     photo?: InputFile | string,
+    media?: { kind: 'photo' | 'video' },
   ): InputRichMessage | null {
     const technique = techniqueOf(line.exerciseId);
     if (!technique) return null;
@@ -58,13 +59,22 @@ export class TechniqueRichBuilder {
     // Локальный файл grammY сериализует в multipart сам — проверено
     // отправкой: блок принимает и InputFile, и file_id
     if (photo) {
-      blocks.push({
-        type: 'photo',
-        photo: { type: 'photo', media: photo },
-        caption: { text: 'Целевые мышцы' },
-      });
+      blocks.push(
+        media?.kind === 'video'
+          ? {
+              type: 'video',
+              video: { type: 'video', media: photo },
+              caption: { text: line.name },
+            }
+          : {
+              type: 'photo',
+              photo: { type: 'photo', media: photo },
+              caption: { text: line.name },
+            },
+      );
     }
 
+    blocks.push(...this.setsList(line));
     blocks.push(this.paramsLine(line, technique));
 
     // Плоские списки вместо details: сворачиваемый блок и чекбоксы
@@ -179,6 +189,39 @@ export class TechniqueRichBuilder {
       timeZone: 'UTC',
     }).format(new Date(Date.UTC(year, month - 1, day)));
     return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}, ${weekday}`;
+  }
+
+  /**
+   * Подходы построчно: «1 · 45 кг × 8». Настоящий блок table клиент
+   * владельца не рисует, поэтому таблица собрана нумерованным списком.
+   */
+  private setsList(line: ExerciseLine): Block[] {
+    const rows = line.setsLine
+      .split(', ')
+      .filter(Boolean)
+      .map((entry, i) => {
+        const [weight, reps] = entry.split('×');
+        const label = reps ? `${weight} кг × ${reps}` : `${weight} повт`;
+        return `${i + 1} · ${label}`;
+      });
+    if (rows.length === 0) return [];
+    return [
+      {
+        type: 'heading',
+        size: 5,
+        text: [
+          emoji(this.config, 'dumbbell'),
+          ' ',
+          { type: 'bold', text: 'Подходы' },
+        ],
+      },
+      {
+        type: 'list',
+        items: rows.map((text) => ({
+          blocks: [{ type: 'paragraph', text }],
+        })),
+      },
+    ];
   }
 
   /** Однострочные пункты «Заголовок: значение» */

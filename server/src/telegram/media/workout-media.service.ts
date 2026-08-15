@@ -103,6 +103,28 @@ export class WorkoutMediaService {
     return out.slice(0, 10);
   }
 
+  /**
+   * Медиа упражнения: сначала персональный файл `ex-<id>.(jpg|mp4|…)`
+   * в каталоге вложений, иначе анатомическая схема целевой группы.
+   */
+  forExercise(
+    exerciseId: string,
+    muscleGroups: string[],
+  ): { file: InputFile; kind: 'photo' | 'video' } | null {
+    const own = this.resolve(`ex-${exerciseId}`);
+    if (own) {
+      return {
+        file: new InputFile(
+          readFileSync(own.path),
+          `ex-${exerciseId}.${own.ext}`,
+        ),
+        kind: VIDEO_EXT.includes(own.ext) ? 'video' : 'photo',
+      };
+    }
+    const group = this.photoForGroups(muscleGroups);
+    return group ? { file: group, kind: 'photo' } : null;
+  }
+
   /** Картинка целевой группы упражнения; null — для этой группы файла нет */
   photoForGroups(muscleGroups: string[]): InputFile | null {
     const group = muscleGroups.find((g) => GROUP_PHOTO[g]);
