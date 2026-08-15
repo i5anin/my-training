@@ -267,6 +267,29 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Отправить тренировку заново: сводка, карточки и шпаргалка приходят
+   * новыми сообщениями. Правка на месте не поднимает сообщения в ленте и
+   * не даёт уведомления, поэтому для «скинь ещё раз» нужен именно сброс
+   * журнала — прежние сообщения остаются в чате как есть.
+   */
+  async resendWorkout(workoutId: number): Promise<{
+    digest: 'sent' | 'updated' | 'skipped';
+    cards: number;
+    sheet: 'sent' | 'updated' | null;
+  }> {
+    const digest = await this.digests.forId(workoutId);
+    if (!digest) return { digest: 'skipped', cards: 0, sheet: null };
+
+    await this.cardLog.delete({ workoutId });
+    await this.log.delete({ date: digest.date, workoutId });
+
+    const sent = await this.sendDailyDigest(digest.date, true);
+    const cards = await this.sendTechniqueCards(workoutId);
+    const sheet = await this.sendCheatSheet(workoutId);
+    return { digest: sent, cards: cards.sent, sheet };
+  }
+
+  /**
    * Шпаргалка на тренировку одним сообщением. id хранится в CardLog под
    * служебным ключом, поэтому повторный вызов правит её, а не дублирует.
    */
