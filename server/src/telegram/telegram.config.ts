@@ -25,6 +25,12 @@ export class TelegramConfig {
   readonly sendMedia: boolean;
   readonly appUrl: string;
   readonly emojiMap: Record<string, string>;
+  /** Эмодзи стикера-разделителя дня; пусто — разделитель выключен */
+  readonly dayStickerEmoji: string;
+  /** Набор, из которого берётся стикер */
+  readonly dayStickerSet: string;
+  /** Готовый file_id, если не хочется искать по набору */
+  readonly dayStickerId: string;
 
   constructor(config: ConfigService) {
     this.token = config.get<string>('TELEGRAM_BOT_TOKEN', '').trim();
@@ -50,6 +56,15 @@ export class TelegramConfig {
     this.emojiMap = this.parseEmojiMap(
       config.get<string>('TELEGRAM_EMOJI_MAP', ''),
     );
+    this.dayStickerEmoji = config
+      .get<string>('TELEGRAM_DAY_STICKER', '🔥')
+      .trim();
+    this.dayStickerSet = config
+      .get<string>('TELEGRAM_DAY_STICKER_SET', 'AnimatedEmojies')
+      .trim();
+    this.dayStickerId = config
+      .get<string>('TELEGRAM_DAY_STICKER_ID', '')
+      .trim();
   }
 
   /** Бот включён, только если задан токен и чат владельца */

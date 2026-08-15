@@ -30,6 +30,9 @@ const EMPTY_DAY = 0;
 /** Служебный ключ шпаргалки в журнале карточек */
 const SHEET_KEY = '__sheet__';
 
+/** Служебный workoutId стикера-разделителя дня */
+const DAY_MARK = -1;
+
 /** Отправка сводок и (при включённом приёме обновлений) обработка команд */
 @Injectable()
 export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
@@ -105,6 +108,9 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
   ): Promise<'sent' | 'updated' | 'skipped'> {
     if (!this.bot) return 'skipped';
     const digests = await this.digests.forDate(date);
+
+    // Разделитель дня — перед любым первым сообщением этой даты
+    await this.markNewDay(date);
 
     if (digests.length === 0) return this.sendEmptyDay(date, force);
 
@@ -267,6 +273,52 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Стикер-разделитель перед первым сообщением нового дня. Отправляется
+   * один раз на дату: факт фиксируется в журнале служебной записью.
+   */
+  private async markNewDay(date: string) {
+    if (!this.bot || !this.config.dayStickerEmoji) return;
+    const existing = await this.log.findOneBy({ date, workoutId: DAY_MARK });
+    if (existing) return;
+
+    const fileId = await this.dayStickerFileId();
+    if (!fileId) return;
+    try {
+      const message = await this.bot.api.sendSticker(
+        this.config.ownerChatId,
+        fileId,
+      );
+      await this.remember(date, DAY_MARK, message.message_id, 'day');
+    } catch (error) {
+      this.logger.warn(`стикер дня не отправлен: ${this.describe(error)}`);
+    }
+  }
+
+  /** file_id стикера: из настроек либо поиском по набору, с кешем */
+  private async dayStickerFileId(): Promise<string | null> {
+    if (this.config.dayStickerId) return this.config.dayStickerId;
+    if (this.stickerId) return this.stickerId;
+    try {
+      const set = await this.bot!.api.getStickerSet(this.config.dayStickerSet);
+      const found = set.stickers.find(
+        (s) => s.emoji === this.config.dayStickerEmoji,
+      );
+      this.stickerId = found?.file_id;
+      if (!this.stickerId) {
+        this.logger.warn(
+          `в наборе ${this.config.dayStickerSet} нет ${this.config.dayStickerEmoji}`,
+        );
+      }
+      return this.stickerId ?? null;
+    } catch (error) {
+      this.logger.warn(`набор стикеров недоступен: ${this.describe(error)}`);
+      return null;
+    }
+  }
+
+  private stickerId?: string;
+
+  /**
    * Отправить тренировку заново: сводка, карточки и шпаргалка приходят
    * новыми сообщениями. Правка на месте не поднимает сообщения в ленте и
    * не даёт уведомления, поэтому для «скинь ещё раз» нужен именно сброс
@@ -280,6 +332,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     const digest = await this.digests.forId(workoutId);
     if (!digest) return { digest: 'skipped', cards: 0, sheet: null };
 
+    // Маркер дня не трогаем: стикер уже стоит в ленте выше и не дублируется
     await this.cardLog.delete({ workoutId });
     await this.log.delete({ date: digest.date, workoutId });
 
@@ -381,6 +434,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
       ? digest.exercises.filter((l) => onlyIds.includes(l.exerciseId))
       : digest.exercises;
 
+    await this.markNewDay(digest.date);
     const day = this.dayLabel(digest);
     let sent = 0;
     let edited = 0;
