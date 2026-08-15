@@ -8,6 +8,20 @@ import { techniqueOf, type Technique } from './exercise-technique';
 
 type Block = InputRichBlock;
 
+/** Цифры даты в разделителе дня */
+const DIGIT_EMOJI: Record<string, string> = {
+  '0': '0️⃣',
+  '1': '1️⃣',
+  '2': '2️⃣',
+  '3': '3️⃣',
+  '4': '4️⃣',
+  '5': '5️⃣',
+  '6': '6️⃣',
+  '7': '7️⃣',
+  '8': '8️⃣',
+  '9': '9️⃣',
+};
+
 /**
  * Карточка упражнения блоками Bot API 10.2: фото группы мышц, параметры,
  * техника и ошибки списками. Лимит 32768 символов против 1024 у подписи
@@ -119,6 +133,41 @@ export class TechniqueRichBuilder {
     });
 
     return { blocks };
+  }
+
+  /**
+   * Разделитель нового дня: дата эмодзи-цифрами. Отбивает данные одного
+   * дня от другого лучше сплошного текста и виден при быстрой прокрутке.
+   */
+  dayMark(date: string): InputRichMessage {
+    const [, month, day] = date.split('-').map(Number);
+    const digits = (value: number) =>
+      String(value)
+        .padStart(2, '0')
+        .split('')
+        .map((char) => DIGIT_EMOJI[char] ?? char)
+        .join('');
+    const weekday = new Intl.DateTimeFormat('ru-RU', {
+      weekday: 'long',
+      timeZone: 'UTC',
+    }).format(new Date(`${date}T12:00:00Z`));
+
+    return {
+      blocks: [
+        { type: 'divider' },
+        {
+          type: 'heading',
+          size: 4,
+          text: [
+            digits(day),
+            ' ▪️ ',
+            digits(month),
+            '   ',
+            { type: 'bold', text: weekday },
+          ],
+        },
+      ],
+    };
   }
 
   /**

@@ -25,7 +25,12 @@ export class TelegramConfig {
   readonly sendMedia: boolean;
   readonly appUrl: string;
   readonly emojiMap: Record<string, string>;
-  /** Эмодзи стикера-разделителя дня; пусто — разделитель выключен */
+  /**
+   * Разделитель дня: date — дата эмодзи-цифрами, sticker — стикер,
+   * off — не отправлять ничего.
+   */
+  readonly dayMark: 'date' | 'sticker' | 'off';
+  /** Эмодзи стикера-разделителя дня, если выбран режим sticker */
   readonly dayStickerEmoji: string;
   /** Набор, из которого берётся стикер */
   readonly dayStickerSet: string;
@@ -56,6 +61,9 @@ export class TelegramConfig {
     this.emojiMap = this.parseEmojiMap(
       config.get<string>('TELEGRAM_EMOJI_MAP', ''),
     );
+    const mark = config.get<string>('TELEGRAM_DAY_MARK', 'date').trim();
+    this.dayMark =
+      mark === 'sticker' ? 'sticker' : mark === 'off' ? 'off' : 'date';
     this.dayStickerEmoji = config
       .get<string>('TELEGRAM_DAY_STICKER', '🔥')
       .trim();

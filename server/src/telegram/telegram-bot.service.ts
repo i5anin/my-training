@@ -109,9 +109,6 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     if (!this.bot) return 'skipped';
     const digests = await this.digests.forDate(date);
 
-    // Разделитель дня — перед любым первым сообщением этой даты
-    await this.markNewDay(date);
-
     if (digests.length === 0) return this.sendEmptyDay(date, force);
 
     let result: 'sent' | 'updated' | 'skipped' = 'skipped';
@@ -135,6 +132,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     if (existing && !force) return 'skipped';
 
     const empty = await this.digests.emptyDay(date);
+    await this.markNewDay(date);
     const keyboard = {
       inline_keyboard: emptyKeyboard(this.config, empty.lastWorkoutId),
     };
@@ -182,6 +180,10 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     const keyboard = {
       inline_keyboard: digestKeyboard(this.config, digest),
     };
+
+    // Разделитель — только перед реальной отправкой, чтобы в дни без
+    // сообщений в чате не оставалась одинокая дата
+    if (!existing) await this.markNewDay(digest.date);
 
     let sent: { id: number; variant: string };
     try {
@@ -277,21 +279,29 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
    * один раз на дату: факт фиксируется в журнале служебной записью.
    */
   private async markNewDay(date: string) {
-    if (!this.bot || !this.config.dayStickerEmoji) return;
+    if (!this.bot || this.config.dayMark === 'off') return;
     const existing = await this.log.findOneBy({ date, workoutId: DAY_MARK });
     if (existing) return;
 
-    const fileId = await this.dayStickerFileId();
-    if (!fileId) return;
     try {
-      const message = await this.bot.api.sendSticker(
-        this.config.ownerChatId,
-        fileId,
-      );
-      await this.remember(date, DAY_MARK, message.message_id, 'day');
+      const message =
+        this.config.dayMark === 'sticker'
+          ? await this.sendDaySticker()
+          : await this.bot.api.sendRichMessage(
+              this.config.ownerChatId,
+              this.richCards.dayMark(date),
+            );
+      if (message)
+        await this.remember(date, DAY_MARK, message.message_id, 'day');
     } catch (error) {
-      this.logger.warn(`стикер дня не отправлен: ${this.describe(error)}`);
+      this.logger.warn(`разделитель дня не отправлен: ${this.describe(error)}`);
     }
+  }
+
+  private async sendDaySticker() {
+    const fileId = await this.dayStickerFileId();
+    if (!fileId) return null;
+    return this.bot!.api.sendSticker(this.config.ownerChatId, fileId);
   }
 
   /** file_id стикера: из настроек либо поиском по набору, с кешем */
@@ -371,6 +381,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
       return 'updated';
     }
 
+    await this.markNewDay(digest.date);
     const message = await this.bot.api.sendRichMessage(
       this.config.ownerChatId,
       rich,
@@ -434,7 +445,6 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
       ? digest.exercises.filter((l) => onlyIds.includes(l.exerciseId))
       : digest.exercises;
 
-    await this.markNewDay(digest.date);
     const day = this.dayLabel(digest);
     let sent = 0;
     let edited = 0;
@@ -449,6 +459,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
         workoutId,
         exerciseId: line.exerciseId,
       });
+      if (!known) await this.markNewDay(digest.date);
       const found = this.media.forExercise(line.exerciseId, line.muscleGroups);
       const photo = found?.file ?? null;
       const rich = this.config.useRich
