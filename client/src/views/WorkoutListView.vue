@@ -310,8 +310,7 @@ async function doImport() {
   border-bottom: 1px solid #222;
 }
 
-/* Иконка lucide — SVG с display:block по умолчанию: без flex она
-   переносится на свою строку, а не встаёт в одну линию с текстом */
+/* SVG lucide — display:block, без flex переносится на свою строку */
 .month-cell {
   display: flex;
   align-items: center;
@@ -334,6 +333,7 @@ async function doImport() {
   color: #777;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .month-count {
