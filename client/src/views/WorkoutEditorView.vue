@@ -7,6 +7,7 @@ import { getWorkout, getNextWorkoutId, saveWorkout } from '@/db'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { useEditTiming } from '@/composables/useEditTiming'
 import MuscleGroupPhotos from '@/components/MuscleGroupPhotos.vue'
+import MiniMonthCalendar from '@/components/MiniMonthCalendar.vue'
 import WorkoutFormHeader from '@/components/WorkoutFormHeader.vue'
 import WorkoutReadView from '@/components/WorkoutReadView.vue'
 import WorkoutEntryList from '@/components/WorkoutEntryList.vue'
@@ -247,8 +248,9 @@ onUnmounted(() => {
       <WorkoutReadView v-else :workout="workout" />
     </div>
 
-    <!-- Правая колонка: фото мышц (sticky) -->
+    <!-- Правая колонка: мини-календарь + фото мышц (sticky) -->
     <div class="col-photos">
+      <MiniMonthCalendar />
       <MuscleGroupPhotos
         :primaryType="workout.primaryType || ''"
         :secondaryType="workout.secondaryType || ''"
@@ -292,6 +294,8 @@ onUnmounted(() => {
 /* Фото справа только когда панель шире 560px */
 .col-photos {
   display: none;
+  flex-direction: column;
+  gap: 12px;
   width: 150px;
   flex-shrink: 0;
   position: sticky;
@@ -300,7 +304,7 @@ onUnmounted(() => {
 
 @container (min-width: 560px) {
   .col-photos {
-    display: block;
+    display: flex;
   }
 }
 
