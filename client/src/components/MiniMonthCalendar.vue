@@ -88,7 +88,8 @@ function openDay(cell: DayCell) {
         }"
         @click="openDay(cell)"
       >
-        <span v-if="cell.inMonth">{{ cell.day }}</span>
+        <span v-if="cell.inMonth" class="mc-day-num">{{ cell.day }}</span>
+        <span v-if="cell.workouts.length" class="mc-day-dot" />
       </div>
     </div>
   </div>
@@ -96,7 +97,7 @@ function openDay(cell: DayCell) {
 
 <style scoped>
 .mini-cal {
-  padding: 8px;
+  padding: 12px;
   background: #181818;
   border: 1px solid #2a2a2a;
   border-radius: 8px;
@@ -106,17 +107,17 @@ function openDay(cell: DayCell) {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .mc-month {
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #ccc;
 }
 
 .mc-link {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: #5a8;
   text-decoration: none;
 }
@@ -128,12 +129,12 @@ function openDay(cell: DayCell) {
 .mc-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
 .mc-weekdays span {
   text-align: center;
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   color: #555;
   text-transform: uppercase;
 }
@@ -141,17 +142,30 @@ function openDay(cell: DayCell) {
 .mc-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 3px;
 }
 
 .mc-day {
   aspect-ratio: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  gap: 2px;
+  font-size: 0.85rem;
   color: #888;
-  border-radius: 3px;
+  border-radius: 4px;
+}
+
+.mc-day-num {
+  line-height: 1;
+}
+
+.mc-day-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #5a8;
 }
 
 .mc-day-empty {
@@ -172,5 +186,9 @@ function openDay(cell: DayCell) {
   border: 1px solid #2a7a4a;
   color: #5a8;
   font-weight: 700;
+}
+
+.mc-day-today .mc-day-dot {
+  background: #8fd;
 }
 </style>
