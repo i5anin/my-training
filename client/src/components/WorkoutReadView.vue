@@ -7,6 +7,7 @@ import { useCatalogStore } from '@/stores/catalogStore'
 import { getPhotoUrl } from '@/db'
 import { isBigThree } from '@/composables/bigThree'
 import MgIcon from '@/components/MgIcon.vue'
+import { getMuscleGroupLetter, getMuscleGroupColor } from '@/constants/muscleGroupIcons'
 
 dayjs.locale('ru')
 
@@ -47,6 +48,12 @@ const maxSets = computed(() => Math.max(1, ...colsByEntry.value.map((c) => c.len
 function exName(id: string) {
   return catalog.getExerciseById(id)?.name ?? id
 }
+
+// Главная (первая) группа мышц конкретного упражнения — не всей
+// тренировки: у одной сессии могут быть упражнения на разные группы
+function primaryGroup(exerciseId: string): string | null {
+  return catalog.getExerciseById(exerciseId)?.muscleGroups?.[0] ?? null
+}
 </script>
 
 <template>
@@ -70,6 +77,7 @@ function exName(id: string) {
           <th class="rv-num">№</th>
           <th class="rv-ex">Упражнение</th>
           <th v-for="n in maxSets" :key="n" class="rv-set-h">{{ n }}</th>
+          <th class="rv-mg-h"></th>
         </tr>
       </thead>
       <tbody>
@@ -105,6 +113,16 @@ function exName(id: string) {
                 <span class="rv-r">{{ b.reps }}</span>
               </div>
             </template>
+          </td>
+          <td class="rv-mg">
+            <span
+              v-if="primaryGroup(e.exerciseId)"
+              class="rv-mg-badge"
+              :style="{
+                color: getMuscleGroupColor(primaryGroup(e.exerciseId)!),
+                borderColor: getMuscleGroupColor(primaryGroup(e.exerciseId)!),
+              }"
+            >{{ getMuscleGroupLetter(primaryGroup(e.exerciseId)!) }}</span>
           </td>
         </tr>
       </tbody>
@@ -264,6 +282,23 @@ function exName(id: string) {
 
 .rv-set.warmup {
   color: #6ab4e8;
+}
+
+.rv-mg {
+  text-align: center;
+  padding-left: 16px;
+}
+
+.rv-mg-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .rv-legend {
