@@ -5,8 +5,9 @@ import { useWorkoutStore } from '@/stores/workoutStore'
 import { useCatalogStore } from '@/stores/catalogStore'
 import { deleteWorkout, exportAll, importAll } from '@/db'
 import { formatDate, gapDays, type WorkoutListRow } from '@/composables/workoutFormat'
+import { useCollapsedMonths } from '@/composables/useCollapsedMonths'
 import WorkoutRow from '@/components/WorkoutRow.vue'
-import { Upload, Download, Clock, Plus } from 'lucide-vue-next'
+import { Upload, Download, Clock, Plus, ChevronDown, ChevronsDownUp } from 'lucide-vue-next'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import type { Workout } from '@/types'
 import dayjs from 'dayjs'
@@ -79,6 +80,9 @@ const groups = computed(() => {
     workouts,
   }))
 })
+
+const { collapsed, toggleMonth, collapseAllButFirst, expandAll, allCollapsedButFirst } =
+  useCollapsedMonths(groups)
 
 // ─── Подозрение на дубликат: одинаковый состав упражнений и подходов ───
 function workoutSignature(w: Workout): string | null {
@@ -173,6 +177,19 @@ async function doImport() {
         </TooltipTrigger>
         <TooltipContent>Импорт из файла</TooltipContent>
       </Tooltip>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button
+            class="btn btn-sm"
+            @click="allCollapsedButFirst ? expandAll() : collapseAllButFirst()"
+          >
+            <ChevronsDownUp class="size-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {{ allCollapsedButFirst ? 'Развернуть все месяцы' : 'Свернуть все месяцы, кроме текущего' }}
+        </TooltipContent>
+      </Tooltip>
     </div>
 
     <div v-if="filtered.length === 0" class="empty">
@@ -192,22 +209,25 @@ async function doImport() {
           </tr>
         </thead>
         <tbody v-for="g in groups" :key="g.key">
-          <tr class="month-row">
-            <td colspan="6">
+          <tr class="month-row" @click="toggleMonth(g.key)">
+            <td colspan="6" class="month-cell">
+              <ChevronDown class="size-3 month-chevron" :class="{ 'month-chevron-collapsed': collapsed.has(g.key) }" />
               <span class="month-label">{{ g.label }}</span>
               <span class="month-count">{{ g.workouts.length }}</span>
             </td>
           </tr>
-          <WorkoutRow
-            v-for="w in g.workouts"
-            :key="w.id"
-            :workout="w"
-            :active="w.id === activeId"
-            :duplicates="duplicatesOf.get(w.id)"
-            @edit="router.push({ name: 'edit-workout', params: { id: w.id } })"
-            @duplicate="duplicate(w.id)"
-            @remove="remove(w.id)"
-          />
+          <template v-if="!collapsed.has(g.key)">
+            <WorkoutRow
+              v-for="w in g.workouts"
+              :key="w.id"
+              :workout="w"
+              :active="w.id === activeId"
+              :duplicates="duplicatesOf.get(w.id)"
+              @edit="router.push({ name: 'edit-workout', params: { id: w.id } })"
+              @duplicate="duplicate(w.id)"
+              @remove="remove(w.id)"
+            />
+          </template>
         </tbody>
       </table>
     </div>
@@ -277,9 +297,35 @@ async function doImport() {
   font-size: 0.8rem;
 }
 
+.month-row {
+  cursor: pointer;
+}
+
+.month-row:hover .month-label {
+  color: #aaa;
+}
+
 .month-row td {
   padding: 8px 4px 4px;
   border-bottom: 1px solid #222;
+}
+
+/* Иконка lucide — SVG с display:block по умолчанию: без flex она
+   переносится на свою строку, а не встаёт в одну линию с текстом */
+.month-cell {
+  display: flex;
+  align-items: center;
+}
+
+.month-chevron {
+  color: #555;
+  margin-right: 4px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.month-chevron-collapsed {
+  transform: rotate(-90deg);
 }
 
 .month-label {
