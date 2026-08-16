@@ -49,16 +49,22 @@ export function getMuscleGroupImage(id: string): string | null {
   return MUSCLE_GROUP_IMAGES[id] ?? null
 }
 
-/** Буква-бейдж на строку упражнения: одна буква на семью групп мышц */
+/**
+ * Буква-бейдж на строку упражнения — одна буква на семью групп мышц,
+ * от русского названия (label в каталоге), а не от английского id.
+ * «Пресс» и «Плечи» обе тянутся к «П» — Пресс/Косые обозначены как «Ж»
+ * (живот), это устоявшийся термин. «Кардио» тоже претендовало на «К»
+ * вместе с «Косые»/«Квадрицепс» — оставлено двубуквенным «Кд».
+ */
 export const MUSCLE_GROUP_LETTERS: Record<string, string> = {
-  chest: 'Г',
-  back: 'С', lats: 'С', traps: 'С', 'lower-back': 'С',
-  shoulders: 'П', 'rear-delts': 'П',
-  arms: 'Р', biceps: 'Р', triceps: 'Р', forearms: 'Р',
-  legs: 'Н', quadriceps: 'Н', hamstrings: 'Н',
+  chest: 'Г', // Грудь
+  back: 'С', lats: 'С', traps: 'С', 'lower-back': 'С', // Спина
+  shoulders: 'П', 'rear-delts': 'П', // Плечи
+  arms: 'Р', biceps: 'Р', triceps: 'Р', forearms: 'Р', // Руки
+  legs: 'Н', quadriceps: 'Н', hamstrings: 'Н', // Ноги
   glutes: 'Н', икры: 'Н',
-  core: 'К', obliques: 'К',
-  cardio: 'Д',
+  core: 'Ж', obliques: 'Ж', // Пресс / Косые
+  cardio: 'Кд', // Кардио
 }
 
 /** Приглушённый акцентный цвет на семью — узнаваемый оттенок, без крикливой яркости */

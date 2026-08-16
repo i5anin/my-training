@@ -9,6 +9,8 @@ const props = withDefaults(defineProps<{
 
 const letter = computed(() => getMuscleGroupLetter(props.id))
 const color = computed(() => getMuscleGroupColor(props.id))
+// Двубуквенные («Кд») мельче — иначе не влезают в круг на маленьких размерах
+const fontScale = computed(() => (letter.value.length > 1 ? 0.4 : 0.55))
 </script>
 
 <template>
@@ -17,7 +19,7 @@ const color = computed(() => getMuscleGroupColor(props.id))
     :style="{
       width: size + 'px',
       height: size + 'px',
-      fontSize: size * 0.55 + 'px',
+      fontSize: size * fontScale + 'px',
       color,
       borderColor: color,
     }"
