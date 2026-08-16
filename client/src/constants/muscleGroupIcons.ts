@@ -61,16 +61,17 @@ export const MUSCLE_GROUP_LETTERS: Record<string, string> = {
   cardio: 'Д',
 }
 
-/** Насыщенный акцентный цвет на ту же семью — не бледный, узнаваемый на тёмном фоне */
+/** Приглушённый акцентный цвет на семью — узнаваемый оттенок, без крикливой яркости */
 export const MUSCLE_GROUP_COLORS: Record<string, string> = {
-  chest: '#e8524a',
-  back: '#4a8fe8', lats: '#4a8fe8', traps: '#4a8fe8', 'lower-back': '#4a8fe8',
-  shoulders: '#e8c34a', 'rear-delts': '#e8c34a',
-  arms: '#4ae87a', biceps: '#4ae87a', triceps: '#4ae87a', forearms: '#4ae87a',
-  legs: '#a24ae8', quadriceps: '#a24ae8', hamstrings: '#a24ae8',
-  glutes: '#a24ae8', икры: '#a24ae8',
-  core: '#e84aa2', obliques: '#e84aa2',
-  cardio: '#4ae8e0',
+  chest: '#c97b76',
+  back: '#7ba3d9', lats: '#7ba3d9', traps: '#7ba3d9', 'lower-back': '#7ba3d9',
+  shoulders: '#cbb676',
+  'rear-delts': '#cbb676',
+  arms: '#76c98f', biceps: '#76c98f', triceps: '#76c98f', forearms: '#76c98f',
+  legs: '#a67bc9', quadriceps: '#a67bc9', hamstrings: '#a67bc9',
+  glutes: '#a67bc9', икры: '#a67bc9',
+  core: '#c976a6', obliques: '#c976a6',
+  cardio: '#76c9c4',
 }
 
 export function getMuscleGroupLetter(id: string): string {
