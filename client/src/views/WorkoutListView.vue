@@ -306,7 +306,7 @@ async function doImport() {
 }
 
 .month-row td {
-  padding: 8px 4px 4px;
+  padding: 10px 4px 8px;
   border-bottom: 1px solid #222;
 }
 

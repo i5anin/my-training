@@ -193,7 +193,9 @@ td {
   color: #888;
   white-space: nowrap;
   text-align: center;
-  width: 36px;
+  /* 36px обрезал двузначные значения вида «10 / 44» — .table-wrap
+     родителя режет overflow-x, лишний текст просто пропадал */
+  width: 52px;
 }
 
 .td-sets {
