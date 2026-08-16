@@ -34,6 +34,13 @@ export class Workout {
   @Column({ nullable: true })
   isPlan: boolean;
 
+  /**
+   * Закладка «требует внимания» — например, id временный и подлежит
+   * пересчёту при следующей нормализации нумерации.
+   */
+  @Column({ nullable: true })
+  flagged: boolean;
+
   @Column({ nullable: true })
   createdAt: string;
 
