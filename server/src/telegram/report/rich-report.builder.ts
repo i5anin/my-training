@@ -195,7 +195,7 @@ export class RichReportBuilder {
 
   private setsDetails(digest: WorkoutDigest): Block | null {
     const items = digest.exercises
-      .filter((line) => line.setsLine || line.warmupLine)
+      .filter((line) => line.setsLine || line.warmupLine || line.burnoutLine)
       .map((line) => {
         const text: RichText[] = [
           { type: 'bold', text: line.name },
@@ -205,6 +205,11 @@ export class RichReportBuilder {
           text.push({
             type: 'italic',
             text: ` · разминка: ${line.warmupLine}`,
+          });
+        if (line.burnoutLine)
+          text.push({
+            type: 'italic',
+            text: ` · добивка: ${line.burnoutLine}`,
           });
         if (line.note) text.push({ type: 'italic', text: ` · ${line.note}` });
         const blocks: Block[] = [{ type: 'paragraph', text }];

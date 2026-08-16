@@ -182,6 +182,7 @@ export class WorkoutDigestService {
     const all = entry.sets ?? [];
     const main = mainSets(all);
     const warmup = all.filter((s) => s.isWarmup);
+    const burnout = all.filter((s) => s.isBurnout);
     const best = bestWeight(main, bar);
 
     return {
@@ -191,6 +192,10 @@ export class WorkoutDigestService {
       scheme: this.scheme(main, bar),
       setsLine: this.setsLine(main, bar),
       warmupLine: this.setsLine(warmup, bar),
+      // Добивочные подходы исключены из mainSets/setsLine (не входят в
+      // тоннаж и в поиск «лучшего веса»), но должны быть видны в карточке —
+      // иначе реальный подход просто пропадает из отчёта
+      burnoutLine: this.setsLine(burnout, bar),
       mainSets: main.length,
       allSets: all.length,
       totalReps: this.repsOf(main),

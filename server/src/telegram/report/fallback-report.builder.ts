@@ -47,6 +47,7 @@ export class FallbackReportBuilder {
         `• *${esc(line.name)}* — ${esc(line.setsLine || '—')} · ${esc(volumeOf(line))} · ||${esc(line.delta)}||`,
       );
       if (line.warmupLine) lines.push(`  _разминка: ${esc(line.warmupLine)}_`);
+      if (line.burnoutLine) lines.push(`  _добивка: ${esc(line.burnoutLine)}_`);
       if (line.note) lines.push(`  _${esc(line.note)}_`);
     }
 

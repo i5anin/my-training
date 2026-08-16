@@ -245,16 +245,10 @@ export class TechniqueRichBuilder {
    * владельца не рисует, поэтому таблица собрана нумерованным списком.
    */
   private setsList(line: ExerciseLine): Block[] {
-    const rows = line.setsLine
-      .split(', ')
-      .filter(Boolean)
-      .map((entry, i) => {
-        const [weight, reps] = entry.split('×');
-        const label = reps ? `${weight} кг × ${reps}` : `${weight} повт`;
-        return `${i + 1} · ${label}`;
-      });
+    const rows = this.rowsOf(line.setsLine);
     if (rows.length === 0) return [];
-    return [
+
+    const blocks: Block[] = [
       {
         type: 'heading',
         size: 5,
@@ -271,6 +265,37 @@ export class TechniqueRichBuilder {
         })),
       },
     ];
+
+    // Добивочные (дроп-сеты) исключены из подсчёта тоннажа и «лучшего
+    // веса», но это реальный подход — он должен остаться видимым, а не
+    // молча пропасть из карточки
+    const burnoutRows = this.rowsOf(line.burnoutLine);
+    if (burnoutRows.length > 0) {
+      blocks.push({
+        type: 'list',
+        items: burnoutRows.map((text) => ({
+          blocks: [
+            {
+              type: 'paragraph',
+              text: [{ type: 'italic', text: `${text} — добивка` }],
+            },
+          ],
+        })),
+      });
+    }
+
+    return blocks;
+  }
+
+  private rowsOf(setsLine: string): string[] {
+    return setsLine
+      .split(', ')
+      .filter(Boolean)
+      .map((entry, i) => {
+        const [weight, reps] = entry.split('×');
+        const label = reps ? `${weight} кг × ${reps}` : `${weight} повт`;
+        return `${i + 1} · ${label}`;
+      });
   }
 
   /** Однострочные пункты «Заголовок: значение» */

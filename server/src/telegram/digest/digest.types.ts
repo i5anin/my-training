@@ -11,6 +11,8 @@ export interface ExerciseLine {
   setsLine: string;
   /** Разминочные подходы, пусто если их нет */
   warmupLine: string;
+  /** Добивочные подходы (дроп-сеты после рабочего), пусто если их нет */
+  burnoutLine: string;
   mainSets: number;
   allSets: number;
   /** Сумма повторов в рабочих подходах — метрика упражнений со своим весом */
