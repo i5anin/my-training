@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import { useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { useCatalogStore } from '@/stores/catalogStore'
-import { getMuscleGroupIcon, getMuscleGroupImage } from '@/constants/muscleGroupIcons'
+import MgIcon from '@/components/MgIcon.vue'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import type { Workout } from '@/types'
@@ -78,7 +78,7 @@ function uniqueMuscleGroups(workouts: Workout[]): string[] {
 }
 
 function mgIconsFor(workouts: Workout[]) {
-  return uniqueMuscleGroups(workouts).slice(0, 3).map((id) => ({ id, image: getMuscleGroupImage(id) }))
+  return uniqueMuscleGroups(workouts).slice(0, 3)
 }
 
 function dayTitle(cell: DayCell): string {
@@ -130,10 +130,7 @@ function goToday() { year.value = dayjs().year() }
                 >
                   <span class="cal-day-num">{{ cell.day }}</span>
                   <div class="cal-day-icons">
-                    <template v-for="ic in mgIconsFor(cell.workouts)" :key="ic.id">
-                      <img v-if="ic.image" :src="ic.image" :alt="ic.id" class="cal-icon-img" />
-                      <span v-else class="cal-icon-emoji">{{ getMuscleGroupIcon(ic.id) }}</span>
-                    </template>
+                    <MgIcon v-for="id in mgIconsFor(cell.workouts)" :key="id" :id="id" :size="11" />
                   </div>
                 </div>
               </TooltipTrigger>
@@ -293,17 +290,6 @@ function goToday() { year.value = dayjs().year() }
   margin-top: 1px;
 }
 
-.cal-icon-img {
-  width: 11px;
-  height: 11px;
-  object-fit: cover;
-  border-radius: 2px;
-}
-
-.cal-icon-emoji {
-  font-size: 0.6rem;
-  line-height: 1;
-}
 
 @media (max-width: 600px) {
   /* Одна колонка месяцев: включаем прокрутку, снимаем фиксированные строки,

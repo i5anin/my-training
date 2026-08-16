@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useCatalogStore } from '@/stores/catalogStore'
-import { getMuscleGroupIcon, getMuscleGroupImage } from '@/constants/muscleGroupIcons'
+import MgIcon from '@/components/MgIcon.vue'
 import { Check, X } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -66,8 +66,7 @@ function cancel() {
       <div class="dropdown" ref="dropdownRef">
         <button class="dropdown-btn" @click="open = !open" type="button">
           <template v-if="selected()">
-            <img v-if="getMuscleGroupImage(selected()!.id)" :src="getMuscleGroupImage(selected()!.id)!" class="opt-img" />
-            <span v-else class="opt-emoji">{{ getMuscleGroupIcon(selected()!.id) }}</span>
+            <MgIcon :id="selected()!.id" :size="24" />
             <span class="opt-label">{{ selected()!.label }}</span>
           </template>
           <span v-else class="placeholder">— не выбрано —</span>
@@ -85,8 +84,7 @@ function cancel() {
             :class="{ selected: mg.id === modelValue, disabled: mg.id === disabledId }"
             @click="mg.id !== disabledId && select(mg.id)"
           >
-            <img v-if="getMuscleGroupImage(mg.id)" :src="getMuscleGroupImage(mg.id)!" class="opt-img" />
-            <span v-else class="opt-emoji">{{ getMuscleGroupIcon(mg.id) }}</span>
+            <MgIcon :id="mg.id" :size="24" />
             <span class="opt-label">{{ mg.label }}</span>
           </div>
           <div class="opt-item opt-add" @click="startAdd">
@@ -202,21 +200,6 @@ function cancel() {
   color: #5a8;
   border-top: 1px solid #222;
   font-size: 0.85rem;
-}
-
-.opt-img {
-  width: 24px;
-  height: 24px;
-  object-fit: cover;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.opt-emoji {
-  font-size: 1.1rem;
-  width: 24px;
-  text-align: center;
-  flex-shrink: 0;
 }
 
 .opt-label {

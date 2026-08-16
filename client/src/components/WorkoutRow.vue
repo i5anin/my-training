@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useCatalogStore } from '@/stores/catalogStore'
-import { getMuscleGroupIcon, getMuscleGroupImage } from '@/constants/muscleGroupIcons'
+import MgIcon from '@/components/MgIcon.vue'
 import {
   formatDate, fmtDuration, fmtGap, setsCount,
   GAP_WARN_DAYS, type WorkoutListRow,
@@ -67,8 +67,7 @@ const totalSets = computed(() => setsCount(props.workout.entries))
       <TooltipTrigger as-child>
         <td class="td-mg">
           <span v-for="id in (workout.muscleGroups || [])" :key="id" class="mg-icon-wrap">
-            <img v-if="getMuscleGroupImage(id)" :src="getMuscleGroupImage(id)!" :alt="id" class="mg-icon-img" />
-            <span v-else>{{ getMuscleGroupIcon(id) }}</span>
+            <MgIcon :id="id" :size="22" />
           </span>
         </td>
       </TooltipTrigger>
@@ -179,14 +178,6 @@ td {
 .mg-icon-wrap {
   display: inline-block;
   margin-right: 2px;
-}
-
-.mg-icon-img {
-  width: 22px;
-  height: 22px;
-  object-fit: cover;
-  border-radius: 4px;
-  vertical-align: middle;
 }
 
 .td-ex {

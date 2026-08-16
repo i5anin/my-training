@@ -7,7 +7,6 @@ import { useCatalogStore } from '@/stores/catalogStore'
 import { getPhotoUrl } from '@/db'
 import { isBigThree } from '@/composables/bigThree'
 import MgIcon from '@/components/MgIcon.vue'
-import { getMuscleGroupLetter, getMuscleGroupColor } from '@/constants/muscleGroupIcons'
 
 dayjs.locale('ru')
 
@@ -115,14 +114,7 @@ function primaryGroup(exerciseId: string): string | null {
             </template>
           </td>
           <td class="rv-mg">
-            <span
-              v-if="primaryGroup(e.exerciseId)"
-              class="rv-mg-badge"
-              :style="{
-                color: getMuscleGroupColor(primaryGroup(e.exerciseId)!),
-                borderColor: getMuscleGroupColor(primaryGroup(e.exerciseId)!),
-              }"
-            >{{ getMuscleGroupLetter(primaryGroup(e.exerciseId)!) }}</span>
+            <MgIcon v-if="primaryGroup(e.exerciseId)" :id="primaryGroup(e.exerciseId)!" :size="26" />
           </td>
         </tr>
       </tbody>
@@ -287,18 +279,6 @@ function primaryGroup(exerciseId: string): string | null {
 .rv-mg {
   text-align: center;
   padding-left: 16px;
-}
-
-.rv-mg-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: 2px solid;
-  border-radius: 50%;
-  font-size: 0.8rem;
-  font-weight: 700;
 }
 
 .rv-legend {

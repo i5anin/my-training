@@ -1,38 +1,39 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { getMuscleGroupIcon, getMuscleGroupImage } from '@/constants/muscleGroupIcons'
+import { getMuscleGroupLetter, getMuscleGroupColor } from '@/constants/muscleGroupIcons'
 
 const props = withDefaults(defineProps<{
   id: string
   size?: number
 }>(), { size: 18 })
 
-const img = computed(() => getMuscleGroupImage(props.id))
-const emoji = computed(() => getMuscleGroupIcon(props.id))
+const letter = computed(() => getMuscleGroupLetter(props.id))
+const color = computed(() => getMuscleGroupColor(props.id))
 </script>
 
 <template>
-  <img
-    v-if="img"
-    :src="img"
-    :alt="id"
+  <span
     class="mg-icon"
-    :style="{ width: size + 'px', height: size + 'px' }"
-  />
-  <span v-else class="mg-icon-emoji" :style="{ fontSize: size * 0.85 + 'px' }">{{ emoji }}</span>
+    :style="{
+      width: size + 'px',
+      height: size + 'px',
+      fontSize: size * 0.55 + 'px',
+      color,
+      borderColor: color,
+    }"
+  >{{ letter }}</span>
 </template>
 
 <style scoped>
 .mg-icon {
-  display: inline-block;
-  object-fit: cover;
-  border-radius: 3px;
-  vertical-align: middle;
-  flex-shrink: 0;
-}
-.mg-icon-emoji {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid;
+  border-radius: 50%;
+  font-weight: 700;
   line-height: 1;
   vertical-align: middle;
+  flex-shrink: 0;
 }
 </style>
