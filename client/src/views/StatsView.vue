@@ -3,7 +3,8 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { useCatalogStore } from '@/stores/catalogStore'
-import type { SetRow } from '@/types'
+import { barOf, best1RM, mainSets, tonnage } from '@/composables/strength'
+import { isBigThree } from '@/composables/bigThree'
 import SparkCell from '@/components/SparkCell.vue'
 import MgIcon from '@/components/MgIcon.vue'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
@@ -16,10 +17,6 @@ const catalogStore = useCatalogStore()
 type MG = 'all' | string
 const filterMg = ref<MG>('all')
 
-function epley(w: number, r: number) {
-  if (!w || !r) return 0
-  return r === 1 ? w : w * (1 + r / 30)
-}
 
 interface ExStat {
   exerciseId: string
@@ -40,15 +37,17 @@ const exStats = computed<ExStat[]>(() => {
 
   for (const w of sorted) {
     for (const entry of (w.entries || [])) {
-      const sets: SetRow[] = (entry.sets || []).filter((s) => !s.isBurnout && !s.isWarmup)
+      const sets = mainSets(entry.sets)
       const weights = sets.map((s) => s.weight ?? 0).filter((x) => x > 0)
       if (!weights.length) continue
 
-      const max1RM = Math.round(Math.max(...sets.map((s) => epley(s.weight, s.reps))))
-      if (!max1RM) continue
-
       const ex = catalogStore.getExerciseById(entry.exerciseId)
       if (!ex) continue
+
+      // Гриф: из тренировки, иначе из каталога упражнения
+      const bar = barOf(entry, ex)
+      const max1RM = best1RM(sets, bar)
+      if (!max1RM) continue
 
       if (!map.has(entry.exerciseId)) {
         map.set(entry.exerciseId, {
@@ -65,7 +64,7 @@ const exStats = computed<ExStat[]>(() => {
       stat.count++
       stat.best1RM = Math.max(stat.best1RM, max1RM)
       stat.pts1RM.push(max1RM)
-      stat.ptsVol.push(sets.reduce((s, x) => s + (x.weight ?? 0) * (x.reps ?? 0), 0))
+      stat.ptsVol.push(tonnage(sets, bar))
     }
   }
 
@@ -126,6 +125,7 @@ const metric = ref<'1rm' | 'vol'>('1rm')
         v-for="s in filteredStats"
         :key="s.exerciseId"
         class="ex-row"
+        :class="{ 'big-three': isBigThree(s.exerciseId) }"
         @click="router.push({
           name: 'exercise-chart',
           params: { id: s.exerciseId },

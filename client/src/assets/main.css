@@ -76,3 +76,24 @@ input[type="number"] { -moz-appearance: textfield; }
 .cal-tip {
   white-space: pre-line;
 }
+
+/* ── Базовая тройка: жим лёжа, присед, становая ──
+   Золотая рамка во всех списках/таблицах. Глобально, т.к.
+   класс ставится в разных компонентах со scoped-стилями */
+.big-three {
+  border-left: 3px solid #c9a227 !important;
+}
+
+/* Название базового упражнения — золотым */
+.big-three .ex-name,
+.big-three .rv-ex-name,
+.big-three .ex-name-input {
+  color: #e0b93c;
+}
+
+/* Карточка в редакторе — рамка по контуру, а не только слева */
+.entry-card.big-three {
+  border-color: #7a6318;
+  box-shadow: inset 3px 0 0 #c9a227;
+  border-left-width: 1px !important;
+}

@@ -1,7 +1,14 @@
 import {
-  Controller, Get, Post, Delete,
-  Param, Query, Body, Res,
-  UseInterceptors, UploadedFile,
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Query,
+  Body,
+  Res,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
@@ -9,8 +16,11 @@ import { memoryStorage } from 'multer';
 import { PhotosService } from './photos.service';
 
 const MIME: Record<string, string> = {
-  jpg: 'image/jpeg', jpeg: 'image/jpeg',
-  avif: 'image/avif', png: 'image/png', webp: 'image/webp',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  avif: 'image/avif',
+  png: 'image/png',
+  webp: 'image/webp',
 };
 
 @Controller()
@@ -18,10 +28,12 @@ export class PhotosController {
   constructor(private readonly service: PhotosService) {}
 
   @Post('photos')
-  @UseInterceptors(FileInterceptor('file', {
-    storage: memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 },
-  }))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
   upload(@UploadedFile() file: Express.Multer.File, @Body() body: any) {
     const id = body?.id ?? Date.now().toString();
     return this.service.save(id, file.buffer);

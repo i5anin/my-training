@@ -5,6 +5,7 @@ import 'dayjs/locale/ru'
 import type { SetRow, Workout } from '@/types'
 import { useCatalogStore } from '@/stores/catalogStore'
 import { getPhotoUrl } from '@/db'
+import { isBigThree } from '@/composables/bigThree'
 import MgIcon from '@/components/MgIcon.vue'
 
 dayjs.locale('ru')
@@ -72,7 +73,11 @@ function exName(id: string) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(e, i) in (workout.entries || [])" :key="e.id">
+        <tr
+          v-for="(e, i) in (workout.entries || [])"
+          :key="e.id"
+          :class="{ 'big-three': isBigThree(e.exerciseId) }"
+        >
           <td class="rv-num">{{ i + 1 }}</td>
           <td class="rv-ex">
             <div class="rv-ex-name">{{ exName(e.exerciseId) }}</div>
@@ -178,7 +183,9 @@ function exName(id: string) {
   text-align: left;
 }
 
-.rv-set-h {
+/* .rv-table th задаёт text-align: left — перебиваем той же
+   специфичностью, иначе номера колонок уезжают влево от значений */
+.rv-table th.rv-set-h {
   text-align: center;
 }
 
@@ -215,10 +222,15 @@ function exName(id: string) {
   font-variant-numeric: tabular-nums;
 }
 
-/* Вес вправо, повторы влево — крестики стоят в одну вертикаль */
+/* Вес вправо, повторы влево — крестики стоят в одну вертикаль.
+   Блок центрируется в ячейке, поэтому добивка встаёт под подход,
+   а не в одну строку с ним */
 .rv-set-val {
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
+  justify-content: center;
+  width: fit-content;
+  margin: 0 auto;
 }
 
 .rv-w {
@@ -238,8 +250,7 @@ function exName(id: string) {
 
 /* Добивка — компактная плашка под основным подходом */
 .rv-burnout {
-  display: inline-block;
-  margin-top: 3px;
+  margin: 3px auto 0;
   padding: 0 5px;
   border-radius: 3px;
   background: #1e1400;

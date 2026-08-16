@@ -7,6 +7,8 @@ export interface Exercise {
   id: string
   name: string
   muscleGroups: string[]
+  /** Вес грифа по умолчанию, кг — учитывается в статистике */
+  barWeight?: number | null
 }
 
 export interface SetRow {

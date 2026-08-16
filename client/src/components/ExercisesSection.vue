@@ -4,6 +4,7 @@ import { useCatalogStore } from '@/stores/catalogStore'
 import MgIcon from '@/components/MgIcon.vue'
 import { ChevronDown, ChevronUp, X, Plus } from 'lucide-vue-next'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import { isBigThree } from '@/composables/bigThree'
 import { plural, slug } from '@/composables/textFormat'
 import { useCatalogUsage } from '@/composables/useCatalogUsage'
 import type { Exercise } from '@/types'
@@ -63,6 +64,14 @@ async function toggleExMg(ex: Exercise, mgId: string) {
   await catalogStore.addExercise({ ...ex, muscleGroups: next })
 }
 
+/** Вес грифа упражнения: пусто или 0 — гриф не учитывается */
+async function updateExBar(ex: Exercise, e: Event) {
+  const raw = (e.target as HTMLInputElement).value.trim()
+  const bar = raw === '' ? null : Number(raw.replace(',', '.'))
+  if (bar !== null && (!Number.isFinite(bar) || bar < 0)) return
+  await catalogStore.addExercise({ ...ex, barWeight: bar })
+}
+
 async function deleteEx(ex: Exercise) {
   const used = exerciseUsage.value.get(ex.id) ?? 0
   const times = `${used} ${plural(used, 'тренировке', 'тренировках')}`
@@ -115,7 +124,8 @@ function toggleExpand(id: string) {
     <!-- Список -->
     <div class="ex-list">
       <div v-for="ex in filteredExercises" :key="ex.id"
-        class="ex-item" :class="{ expanded: expandedExId === ex.id }">
+        class="ex-item"
+        :class="{ expanded: expandedExId === ex.id, 'big-three': isBigThree(ex.id) }">
         <!-- Свёрнутая строка -->
         <div class="ex-row">
           <input
@@ -149,7 +159,7 @@ function toggleExpand(id: string) {
             <TooltipContent>Удалить</TooltipContent>
           </Tooltip>
         </div>
-        <!-- Раскрытая часть: переключатели групп -->
+        <!-- Раскрытая часть: группы мышц и вес грифа -->
         <div v-if="expandedExId === ex.id" class="ex-edit">
           <button
             v-for="mg in catalogStore.muscleGroups" :key="mg.id"
@@ -157,6 +167,20 @@ function toggleExpand(id: string) {
             :class="{ active: ex.muscleGroups.includes(mg.id) }"
             @click="toggleExMg(ex, mg.id)"
           ><MgIcon :id="mg.id" :size="14" /> {{ mg.label }}</button>
+
+          <!-- Гриф: прибавляется к весу блинов в статистике -->
+          <label class="bar-field">
+            Гриф, кг
+            <input
+              class="bar-input"
+              type="number"
+              step="0.25"
+              min="0"
+              :value="ex.barWeight ?? ''"
+              placeholder="0"
+              @change="updateExBar(ex, $event)"
+            />
+          </label>
         </div>
       </div>
       <div v-if="!filteredExercises.length" class="empty">Ничего не найдено</div>

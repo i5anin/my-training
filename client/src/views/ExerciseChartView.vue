@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { useCatalogStore } from '@/stores/catalogStore'
-import type { SetRow } from '@/types'
+import { barOf, best1RM, mainSets, tonnage, totalWeight } from '@/composables/strength'
 import ApexChart from 'vue3-apexcharts'
 import type { ApexOptions } from 'apexcharts'
 import dayjs from 'dayjs'
@@ -18,16 +18,6 @@ const catalogStore  = useCatalogStore()
 const exerciseId = computed(() => route.params.id as string)
 const exercise   = computed(() => catalogStore.getExerciseById(exerciseId.value))
 
-// --- Формулы нагрузки ---
-// 1RM Эпли
-function epley(w: number, r: number) {
-  if (!w || !r) return 0
-  return r === 1 ? w : w * (1 + r / 30)
-}
-// Tonnage (объёмная нагрузка) за упражнение: сумма weight × reps
-function tonnage(sets: SetRow[]) {
-  return sets.reduce((s, x) => s + (x.weight ?? 0) * (x.reps ?? 0), 0)
-}
 
 // --- Точки данных ---
 interface DataPoint {
@@ -49,18 +39,20 @@ const points = computed<DataPoint[]>(() => {
   for (const w of sorted) {
     const entry = w.entries?.find((e) => e.exerciseId === exerciseId.value)
     if (!entry?.sets?.length) continue
-    const mainSets = entry.sets.filter((s) => !s.isBurnout && !s.isWarmup)
-    if (!mainSets.length) continue
-    const weights = mainSets.map((s) => s.weight ?? 0).filter((x) => x > 0)
+    const sets = mainSets(entry.sets)
+    if (!sets.length) continue
+    // Гриф: из тренировки, иначе из каталога упражнения
+    const bar = barOf(entry, exercise.value)
+    const weights = sets.map((s) => totalWeight(s, bar)).filter((x) => x > 0)
     if (!weights.length) continue
     pts.push({
       date: w.date,
       workoutId: w.id,
       maxWeight: Math.max(...weights),
       avgWeight: Math.round(weights.reduce((a, b) => a + b, 0) / weights.length * 10) / 10,
-      maxReps: Math.max(...mainSets.map((s) => s.reps ?? 0)),
-      max1RM: Math.round(Math.max(...mainSets.map((s) => epley(s.weight, s.reps)))),
-      tonnage: Math.round(tonnage(mainSets)),
+      maxReps: Math.max(...sets.map((s) => s.reps ?? 0)),
+      max1RM: best1RM(sets, bar),
+      tonnage: Math.round(tonnage(sets, bar)),
     })
   }
   return pts

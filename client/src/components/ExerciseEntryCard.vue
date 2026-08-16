@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
 import type { ExerciseEntry, SetRow } from '@/types'
 import ExerciseSelector from './ExerciseSelector.vue'
 import SetsGrid from './SetsGrid.vue'
 import PhotoAttach from './PhotoAttach.vue'
 import { useWorkoutStore } from '@/stores/workoutStore'
+import { useCatalogStore } from '@/stores/catalogStore'
+import { barOf } from '@/composables/strength'
+import { isBigThree } from '@/composables/bigThree'
 import { Trash2 } from 'lucide-vue-next'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
@@ -20,6 +23,12 @@ const emit = defineEmits<{
 }>()
 
 const workoutStore = useWorkoutStore()
+const catalogStore = useCatalogStore()
+
+// Гриф: из тренировки, иначе каталожный вес упражнения
+const effectiveBar = computed(() =>
+  barOf(props.entry, catalogStore.getExerciseById(props.entry.exerciseId)),
+)
 
 // Авто-заполнение из последней тренировки при выборе упражнения
 watch(() => props.entry.exerciseId, (newId) => {
@@ -48,7 +57,10 @@ function updatePhotos(ids: string[]) { emit('update', { ...props.entry, photoIds
 </script>
 
 <template>
-  <div class="entry-card" :class="{ 'in-superset': supersetLabel }">
+  <div
+    class="entry-card"
+    :class="{ 'in-superset': supersetLabel, 'big-three': isBigThree(entry.exerciseId) }"
+  >
 
     <!-- Заголовок -->
     <div class="entry-header">
@@ -73,11 +85,12 @@ function updatePhotos(ids: string[]) { emit('update', { ...props.entry, photoIds
       <!-- Фото -->
       <PhotoAttach :photoIds="entry.photoIds || []" @update="updatePhotos" />
 
-      <!-- Вес штанги -->
+      <!-- Вес штанги: по умолчанию берётся из каталога упражнения -->
       <div class="bar-row">
         <span class="bar-label">Штанга:</span>
         <button v-for="w in [12, 20]" :key="w" class="bar-btn"
-          :class="{ active: entry.barWeight === w }" @click="setBarWeight(w)">{{ w }}</button>
+          :class="{ active: effectiveBar === w, inherited: !entry.barWeight && effectiveBar === w }"
+          @click="setBarWeight(w)">{{ w }}</button>
       </div>
 
       <Tooltip>
@@ -92,7 +105,7 @@ function updatePhotos(ids: string[]) { emit('update', { ...props.entry, photoIds
     <SetsGrid
       :sets="entry.sets"
       :exerciseId="entry.exerciseId"
-      :barWeight="entry.barWeight ?? 0"
+      :barWeight="effectiveBar"
       @update:sets="updateSets"
     />
   </div>
