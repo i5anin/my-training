@@ -296,7 +296,7 @@ onUnmounted(() => {
   display: none;
   flex-direction: column;
   gap: 12px;
-  width: 150px;
+  width: 220px;
   flex-shrink: 0;
   position: sticky;
   top: 0;
