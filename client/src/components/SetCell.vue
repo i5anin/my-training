@@ -74,7 +74,7 @@ function onRepsEnter() {
       <input
         ref="weightInputRef"
         type="number"
-        :value="modelValue.weight || ''"
+        :value="modelValue.weight"
         :placeholder="weightSugg.last ? String(weightSugg.last) : '0'"
         class="cell-input"
         @input="onWeightInput"
@@ -111,7 +111,7 @@ function onRepsEnter() {
       </div>
     </div>
 
-    <span v-if="barWeight && modelValue.weight" class="real-w">={{ modelValue.weight + barWeight }}</span>
+    <span v-if="barWeight" class="real-w">={{ modelValue.weight + barWeight }}</span>
     <button class="rm" @click="emit('remove')"><X class="size-3" /></button>
   </div>
 </template>

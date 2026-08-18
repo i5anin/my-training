@@ -157,7 +157,7 @@ function addSuperset() {
   startEntrySession(e2.id)
 }
 
-async function save() {
+async function save(closeAfter = false) {
   if (saving.value || !editMode.value) return
   // Невалидный номер (пустое поле, дробь) — не пишем в базу
   const id = workout.value.id
@@ -170,8 +170,7 @@ async function save() {
     await saveWorkout(JSON.parse(JSON.stringify(workout.value)))
     savedSnapshot = JSON.stringify(workout.value)
     await workoutStore.load()
-    // Сохранили — возвращаемся в просмотр
-    editMode.value = false
+    if (closeAfter) editMode.value = false
     // Новая тренировка сохранена — переходим на её постоянный маршрут
     if (wasNew) {
       router.replace({ name: 'edit-workout', params: { id: workout.value.id } })
@@ -267,9 +266,13 @@ onUnmounted(() => {
     <template v-else>
       <div class="save-actions">
         <button class="btn btn-cancel" @click="cancelEdit" :disabled="saving">Отмена</button>
-        <button class="btn btn-save" @click="save" :disabled="saving">
+        <button class="btn btn-save-plain" @click="save(false)" :disabled="saving">
           <Save v-if="!saving" class="size-4" />
           {{ saving ? 'Сохраняю...' : 'Сохранить' }}
+        </button>
+        <button class="btn btn-save" @click="save(true)" :disabled="saving">
+          <Save v-if="!saving" class="size-4" />
+          {{ saving ? 'Сохраняю...' : 'Сохранить и закрыть' }}
         </button>
       </div>
     </template>
@@ -319,33 +322,33 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.save-actions .btn-save {
+.save-actions .btn-save,
+.save-actions .btn-save-plain {
   flex: 1;
 }
 
-.btn-cancel {
+/* Отмена и «Сохранить» (без закрытия) — общий нейтральный стиль,
+   отличаются только цветом текста */
+.btn-cancel, .btn-save-plain {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 11px 22px;
   background: #252525;
   border: 1px solid #444;
   border-radius: 6px;
-  color: #aaa;
   font-size: 1rem;
   cursor: pointer;
 }
-
-.btn-cancel:hover {
-  background: #333;
-}
+.btn-cancel { color: #aaa; }
+.btn-save-plain { color: #eee; }
+.btn-cancel:hover, .btn-save-plain:hover { background: #333; }
+.btn-save-plain:disabled { opacity: 0.5; cursor: default; }
 
 /* Кнопка «Редактировать» — отличается от зелёного «Сохранить» */
-.btn-edit {
-  background: #2a4a6a;
-}
-
-.btn-edit:hover {
-  background: #3a5a7a;
-}
-
+.btn-edit { background: #2a4a6a; }
+.btn-edit:hover { background: #3a5a7a; }
 
 .btn {
   padding: 8px 16px;
@@ -357,9 +360,7 @@ onUnmounted(() => {
   font-size: 0.9rem;
 }
 
-.btn:hover {
-  background: #333;
-}
+.btn:hover { background: #333; }
 
 .add-buttons {
   display: flex;

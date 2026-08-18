@@ -50,20 +50,23 @@ export function getMuscleGroupImage(id: string): string | null {
 }
 
 /**
- * Буква-бейдж на строку упражнения — одна буква на семью групп мышц,
- * от русского названия (label в каталоге), а не от английского id.
- * «Пресс» и «Плечи» обе на «П» — намеренно, различаются только цветом.
- * «Кардио» претендовало на «К» вместе с «Косые»/«Квадрицепс» —
- * оставлено двубуквенным, «Кд».
+ * Буква-бейдж на строку упражнения — одна буква (или две при коллизии
+ * первых букв) на семью групп мышц, от русского названия (label в
+ * каталоге), а не от английского id. «Плечи»/«Пресс» оба начинаются
+ * на «П» — разведены на «Пл»/«Пр». «Бицепс»/«Трицепс» разведены от
+ * общего «Р» (Руки) на свои буквы. «Кардио» — двубуквенное «Кд»
+ * (коллизия с «Косые»/«Квадрицепс»).
  */
 export const MUSCLE_GROUP_LETTERS: Record<string, string> = {
   chest: 'Г', // Грудь
   back: 'С', lats: 'С', traps: 'С', 'lower-back': 'С', // Спина
-  shoulders: 'П', 'rear-delts': 'П', // Плечи
-  arms: 'Р', biceps: 'Р', triceps: 'Р', forearms: 'Р', // Руки
+  shoulders: 'Пл', 'rear-delts': 'Пл', // Плечи
+  arms: 'Р', forearms: 'Р', // Руки (общее, без уточнения головки)
+  biceps: 'Б', // Бицепс
+  triceps: 'Т', // Трицепс
   legs: 'Н', quadriceps: 'Н', hamstrings: 'Н', // Ноги
   glutes: 'Н', икры: 'Н',
-  core: 'П', obliques: 'П', // Пресс / Косые
+  core: 'Пр', obliques: 'Пр', // Пресс / Косые
   cardio: 'Кд', // Кардио
 }
 
@@ -73,7 +76,9 @@ export const MUSCLE_GROUP_COLORS: Record<string, string> = {
   back: '#7ba3d9', lats: '#7ba3d9', traps: '#7ba3d9', 'lower-back': '#7ba3d9',
   shoulders: '#cbb676',
   'rear-delts': '#cbb676',
-  arms: '#76c98f', biceps: '#76c98f', triceps: '#76c98f', forearms: '#76c98f',
+  arms: '#76c98f', forearms: '#76c98f',
+  biceps: '#c9945a',
+  triceps: '#8a8ac9',
   legs: '#a67bc9', quadriceps: '#a67bc9', hamstrings: '#a67bc9',
   glutes: '#a67bc9', икры: '#a67bc9',
   core: '#c976a6', obliques: '#c976a6',

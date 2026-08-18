@@ -16,6 +16,8 @@ export interface SetRow {
   weight: number
   isBurnout?: boolean
   isWarmup?: boolean
+  /** Субъективная оценка тяжести подхода: легко / нормально / тяжело */
+  difficulty?: 'easy' | 'normal' | 'hard'
 }
 
 export interface ExerciseEntry {

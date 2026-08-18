@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import dayjs from 'dayjs'
 import { useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/workoutStore'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import type { Workout } from '@/types'
 
 const router = useRouter()
@@ -18,10 +19,17 @@ interface DayCell {
   workouts: Workout[]
 }
 
-const now = dayjs()
+const today = dayjs()
+// Сдвиг просматриваемого месяца от текущего — сама «сегодня» остаётся
+// привязана к реальной дате, не к листаемому месяцу
+const monthOffset = ref(0)
+const viewedMonth = computed(() => today.add(monthOffset.value, 'month'))
 const monthLabel = computed(() =>
-  now.format('MMMM').replace(/^./, (c) => c.toUpperCase()),
+  viewedMonth.value.format('MMMM YYYY').replace(/^./, (c) => c.toUpperCase()),
 )
+
+function prevMonth() { monthOffset.value-- }
+function nextMonth() { monthOffset.value++ }
 
 const workoutsByDate = computed(() => {
   const map = new Map<string, Workout[]>()
@@ -35,10 +43,10 @@ const workoutsByDate = computed(() => {
 
 // Только текущий месяц — узкая боковая панель, полный год сюда не влезет
 const cells = computed<DayCell[]>(() => {
-  const first = now.startOf('month')
+  const first = viewedMonth.value.startOf('month')
   const startWeekday = (first.day() + 6) % 7 // понедельник = 0
   const daysInMonth = first.daysInMonth()
-  const todayKey = now.format('YYYY-MM-DD')
+  const todayKey = today.format('YYYY-MM-DD')
   const out: DayCell[] = []
 
   for (let i = 0; i < startWeekday; i++) {
@@ -70,7 +78,9 @@ function openDay(cell: DayCell) {
 <template>
   <div class="mini-cal">
     <div class="mc-header">
+      <button class="mc-nav" @click="prevMonth"><ChevronLeft class="size-3" /></button>
       <span class="mc-month">{{ monthLabel }}</span>
+      <button class="mc-nav" @click="nextMonth"><ChevronRight class="size-3" /></button>
       <router-link to="/calendar" class="mc-link">весь год</router-link>
     </div>
     <div class="mc-weekdays">
@@ -105,14 +115,36 @@ function openDay(cell: DayCell) {
 
 .mc-header {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
   margin-bottom: 8px;
 }
 
 .mc-month {
+  flex: 1;
   font-size: 0.95rem;
   font-weight: 600;
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mc-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.mc-nav:hover {
+  background: #2a2a2a;
   color: #ccc;
 }
 

@@ -130,6 +130,22 @@ function addBurnoutToCol(colIdx: number) {
   sets.splice(anchor.idx + 1, 0, nb)
   emit('update:sets', sets)
 }
+
+const DIFFICULTY_LEVELS: { value: NonNullable<SetRow['difficulty']>; label: string }[] = [
+  { value: 'easy', label: 'Л' },
+  { value: 'normal', label: 'Н' },
+  { value: 'hard', label: 'Т' },
+]
+
+function setDifficulty(colIdx: number, level: NonNullable<SetRow['difficulty']>) {
+  const col = setColumns.value[colIdx]
+  if (!col) return
+  const sets = [...props.sets]
+  const main = sets[col.mainIdx]
+  if (!main) return
+  sets[col.mainIdx] = { ...main, difficulty: main.difficulty === level ? undefined : level }
+  emit('update:sets', sets)
+}
 </script>
 
 <template>
@@ -187,21 +203,37 @@ function addBurnoutToCol(colIdx: number) {
               @update:modelValue="updateSet(col.burnouts[ri - 1]!.idx, $event)"
               @remove="removeSet(col.burnouts[ri - 1]!.idx)"
             />
-            <!-- ↳ кнопка в пустой ячейке — сюда добавится добивка -->
-            <button
-              v-else-if="ri - 1 === col.burnouts.length"
-              class="add-burnout-here td-hint"
-              @click="addBurnoutToCol(ci)"><CornerDownRight class="size-3" /></button>
+            <!-- ↳ и оценка тяжести в пустой ячейке — сюда добавится добивка -->
+            <div v-else-if="ri - 1 === col.burnouts.length" class="hint-row-cell td-hint">
+              <button class="add-burnout-here" @click="addBurnoutToCol(ci)">
+                <CornerDownRight class="size-3" />
+              </button>
+              <button
+                v-for="lvl in DIFFICULTY_LEVELS"
+                :key="lvl.value"
+                class="difficulty-btn"
+                :class="[`difficulty-${lvl.value}`, { active: col.main.difficulty === lvl.value }]"
+                @click="setDifficulty(ci, lvl.value)"
+              >{{ lvl.label }}</button>
+            </div>
           </td>
           <td></td>
         </tr>
-        <!-- Последняя строка: ↳ только для колонок, уже полностью заполненных -->
+        <!-- Последняя строка: ↳ и оценка тяжести — только для колонок, уже полностью заполненных -->
         <tr class="burnout-hint-row">
           <td v-for="(col, ci) in setColumns" :key="ci" class="td-burnout td-hint">
-            <button
-              v-if="col.burnouts.length === maxBurnouts"
-              class="add-burnout-here"
-              @click="addBurnoutToCol(ci)"><CornerDownRight class="size-3" /></button>
+            <div v-if="col.burnouts.length === maxBurnouts" class="hint-row-cell">
+              <button class="add-burnout-here" @click="addBurnoutToCol(ci)">
+                <CornerDownRight class="size-3" />
+              </button>
+              <button
+                v-for="lvl in DIFFICULTY_LEVELS"
+                :key="lvl.value"
+                class="difficulty-btn"
+                :class="[`difficulty-${lvl.value}`, { active: col.main.difficulty === lvl.value }]"
+                @click="setDifficulty(ci, lvl.value)"
+              >{{ lvl.label }}</button>
+            </div>
           </td>
           <td></td>
         </tr>
@@ -294,18 +326,19 @@ function addBurnoutToCol(colIdx: number) {
   border-top: 1px solid #3a2a00;
 }
 
-/* Ряд-подсказка добивок схлопнут, пока курсор не над таблицей —
+/* Ряд-подсказка добивок схлопнут, пока курсор не над упражнением —
    не резервирует высоту в каждой карточке */
 .burnout-hint-row {
   display: none;
 }
 
-.sets-table:hover .burnout-hint-row {
+.entry-card:hover .burnout-hint-row {
   display: table-row;
 }
 
-/* Кнопки «↳ добавить добивку»: невидимы, пока курсор не над таблицей —
-   иначе пустые пунктирные ряды выглядят как поехавшая вёрстка */
+/* Кнопки «↳ добавить добивку»: невидимы, пока курсор не над упражнением —
+   область срабатывания — вся карточка (.entry-card), а не только сама
+   таблица, иначе кнопку не поймать, не подведя курсор впритык к ней */
 .add-burnout-here {
   background: none;
   border: 1px dashed #4a3a00;
@@ -318,8 +351,39 @@ function addBurnoutToCol(colIdx: number) {
   opacity: 0;
   transition: opacity 0.15s;
 }
-.sets-table:hover .add-burnout-here { opacity: 0.35; }
-.sets-table .add-burnout-here:hover { opacity: 1; border-color: #c84; color: #c84; }
+.entry-card:hover .add-burnout-here { opacity: 0.35; }
+.entry-card .add-burnout-here:hover { opacity: 1; border-color: #c84; color: #c84; }
+
+.hint-row-cell {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.difficulty-btn {
+  background: none;
+  border: 1px dashed #3a3a3a;
+  border-radius: 4px;
+  color: #555;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: bold;
+  line-height: 1;
+  padding: 2px 5px;
+  opacity: 0;
+  transition: opacity 0.15s, border-color 0.1s, color 0.1s, background 0.1s;
+}
+.entry-card:hover .difficulty-btn { opacity: 0.35; }
+.entry-card .difficulty-btn:hover { opacity: 1; }
+
+.difficulty-btn.difficulty-easy:hover,
+.difficulty-btn.difficulty-easy.active { border-color: #5a8; color: #5a8; }
+.difficulty-btn.difficulty-normal:hover,
+.difficulty-btn.difficulty-normal.active { border-color: #6ab4e8; color: #6ab4e8; }
+.difficulty-btn.difficulty-hard:hover,
+.difficulty-btn.difficulty-hard.active { border-color: #c84; color: #c84; }
+
+.difficulty-btn.active { opacity: 1; background: rgba(255, 255, 255, 0.06); }
 
 .td-hint { transition: opacity 0.15s; }
 </style>
