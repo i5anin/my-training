@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useCatalogStore } from '@/stores/catalogStore'
-import MgIcon from '@/components/MgIcon.vue'
 import { ChevronDown, ChevronUp, X, Plus } from 'lucide-vue-next'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { isBigThree } from '@/composables/bigThree'
 import { plural, slug } from '@/composables/textFormat'
 import { useCatalogUsage } from '@/composables/useCatalogUsage'
+import { useMuscleInvolvement, cycleInvolvement } from '@/composables/muscleInvolvement'
+import ExerciseBadges from '@/components/ExerciseBadges.vue'
 import type { Exercise } from '@/types'
 
 const catalogStore = useCatalogStore()
 const { exerciseUsage } = useCatalogUsage()
+const { weakOf, hint: involvementHint } = useMuscleInvolvement()
 
 // ─── Добавление ─────────────────────────────────────────
 const newExName = ref('')
@@ -40,7 +42,9 @@ const exFilterMg = ref('all')
 const filteredExercises = computed(() => {
   const q = exSearch.value.trim().toLowerCase()
   return [...catalogStore.exercises]
-    .filter((e) => exFilterMg.value === 'all' || e.muscleGroups.includes(exFilterMg.value))
+    .filter((e) => exFilterMg.value === 'all'
+      || e.muscleGroups.includes(exFilterMg.value)
+      || weakOf(e).includes(exFilterMg.value))
     .filter((e) => !q || e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q))
     .sort((a, b) => (exerciseUsage.value.get(b.id) ?? 0) - (exerciseUsage.value.get(a.id) ?? 0)
                  || a.name.localeCompare(b.name))
@@ -57,11 +61,9 @@ async function updateExName(ex: Exercise, e: Event) {
   await catalogStore.addExercise({ ...ex, name: name.trim() })
 }
 
-async function toggleExMg(ex: Exercise, mgId: string) {
-  const has = ex.muscleGroups.includes(mgId)
-  const next = has ? ex.muscleGroups.filter((m) => m !== mgId) : [...ex.muscleGroups, mgId]
-  if (next.length === 0) return // нельзя совсем без группы
-  await catalogStore.addExercise({ ...ex, muscleGroups: next })
+async function cycleExMg(ex: Exercise, mgId: string) {
+  const next = cycleInvolvement(ex, mgId)
+  if (next) await catalogStore.addExercise({ ...ex, ...next })
 }
 
 /** Вес грифа упражнения: пусто или 0 — гриф не учитывается */
@@ -138,13 +140,11 @@ function toggleExpand(id: string) {
           <Tooltip>
             <TooltipTrigger as-child>
               <button class="ex-mgs-btn" @click="toggleExpand(ex.id)">
-                <MgIcon v-for="id in ex.muscleGroups" :key="id" :id="id" :size="18" />
+                <ExerciseBadges :exercise="ex" />
                 <component :is="expandedExId === ex.id ? ChevronUp : ChevronDown" class="size-3 text-muted-foreground" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>
-              {{ ex.muscleGroups.map(id => catalogStore.muscleGroups.find(m => m.id === id)?.label ?? id).join(', ') }}
-            </TooltipContent>
+            <TooltipContent>{{ involvementHint(ex) }}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger as-child>
@@ -164,9 +164,13 @@ function toggleExpand(id: string) {
           <button
             v-for="mg in catalogStore.muscleGroups" :key="mg.id"
             class="mg-pill"
-            :class="{ active: ex.muscleGroups.includes(mg.id) }"
-            @click="toggleExMg(ex, mg.id)"
+            :class="{
+              active: ex.muscleGroups.includes(mg.id),
+              weak: weakOf(ex).includes(mg.id),
+            }"
+            @click="cycleExMg(ex, mg.id)"
           ><MgIcon :id="mg.id" :size="14" /> {{ mg.label }}</button>
+          <div class="mg-legend">нажатие: не работает → активная → слабо активная</div>
 
           <!-- Гриф: прибавляется к весу блинов в статистике -->
           <label class="bar-field">
@@ -338,7 +342,14 @@ function toggleExpand(id: string) {
   white-space: nowrap;
 }
 .mg-pill:hover { border-color: #5a8; color: #5a8; }
-.mg-pill.active { border-color: #5a8; background: #1a2a22; color: #5a8; }
+.mg-pill.active { border-color: #d4635c; background: #2a1a1a; color: #d4635c; }
+.mg-pill.weak { border-color: #d1a343; background: #2a2418; color: #d1a343; }
+
+.mg-legend {
+  flex-basis: 100%;
+  color: #555;
+  font-size: 0.65rem;
+}
 
 /* ── Удалить ── */
 .del-btn {

@@ -64,8 +64,8 @@ export const MUSCLE_GROUP_LETTERS: Record<string, string> = {
   arms: 'Р', forearms: 'Р', // Руки (общее, без уточнения головки)
   biceps: 'Б', // Бицепс
   triceps: 'Т', // Трицепс
-  legs: 'Н', quadriceps: 'Н', hamstrings: 'Н', // Ноги
-  glutes: 'Н', икры: 'Н',
+  legs: 'Н', quadriceps: 'Н', hamstrings: 'Н', glutes: 'Н', // Ноги
+  икры: 'И', // Икры
   core: 'Пр', obliques: 'Пр', // Пресс / Косые
   cardio: 'Кд', // Кардио
 }
@@ -91,4 +91,44 @@ export function getMuscleGroupLetter(id: string): string {
 
 export function getMuscleGroupColor(id: string): string {
   return MUSCLE_GROUP_COLORS[id] ?? '#888'
+}
+
+/**
+ * Цвет бейджа по уровню нагрузки: красный — мышца активная, жёлтый —
+ * работает слабо (ассистент или стабилизатор). Перекрывает цвет семьи
+ * там, где важна не группа, а её вклад в упражнение.
+ */
+export const INVOLVEMENT_COLORS = {
+  primary: '#d4635c',
+  secondary: '#d1a343',
+} as const
+
+export type Involvement = keyof typeof INVOLVEMENT_COLORS
+
+export const INVOLVEMENT_LABELS: Record<Involvement, string> = {
+  primary: 'активная',
+  secondary: 'слабо активная',
+}
+
+/**
+ * Группы без совпадающих букв: внутри семьи (спина, ноги) буква общая,
+ * и два одинаковых круга рядом читаются хуже одного. Полный состав
+ * остаётся в подсказке.
+ */
+export function distinctByLetter(ids: string[], taken = new Set<string>()): string[] {
+  const result: string[] = []
+
+  for (const id of ids) {
+    const letter = getMuscleGroupLetter(id)
+    if (taken.has(letter)) continue
+    taken.add(letter)
+    result.push(id)
+  }
+
+  return result
+}
+
+/** Слабые мышцы без тех, чья буква уже занята основными */
+export function distinctSecondary(primary: string[], secondary: string[]): string[] {
+  return distinctByLetter(secondary, new Set(primary.map(getMuscleGroupLetter)))
 }

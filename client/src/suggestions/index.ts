@@ -3,7 +3,12 @@ import type { Workout } from '@/types'
 export function suggestExercises(
   exerciseIds: string[],
   selectedMuscleGroups: string[],
-  allExercises: { id: string; name: string; muscleGroups: string[] }[],
+  allExercises: {
+    id: string
+    name: string
+    muscleGroups: string[]
+    secondaryMuscleGroups?: string[] | null
+  }[],
   allWorkouts: Workout[],
   query: string,
 ): string[] {
@@ -14,15 +19,17 @@ export function suggestExercises(
     }
   }
 
+  // Совпадение по мышцам дня: 2 — активная, 1 — работает слабо, 0 — нет
+  const matchRank = (e: { muscleGroups: string[]; secondaryMuscleGroups?: string[] | null }) => {
+    if (selectedMuscleGroups.length === 0) return 0
+    if (e.muscleGroups.some((mg) => selectedMuscleGroups.includes(mg))) return 2
+    if ((e.secondaryMuscleGroups ?? []).some((mg) => selectedMuscleGroups.includes(mg))) return 1
+    return 0
+  }
+
   let candidates = allExercises
   if (selectedMuscleGroups.length > 0) {
-    const matching = allExercises.filter((e) =>
-      e.muscleGroups.some((mg) => selectedMuscleGroups.includes(mg)),
-    )
-    const rest = allExercises.filter(
-      (e) => !e.muscleGroups.some((mg) => selectedMuscleGroups.includes(mg)),
-    )
-    candidates = [...matching, ...rest]
+    candidates = [...allExercises].sort((a, b) => matchRank(b) - matchRank(a))
   }
 
   if (query) {
@@ -31,9 +38,8 @@ export function suggestExercises(
   }
 
   candidates.sort((a, b) => {
-    const aMatch = selectedMuscleGroups.length > 0 && a.muscleGroups.some((mg) => selectedMuscleGroups.includes(mg))
-    const bMatch = selectedMuscleGroups.length > 0 && b.muscleGroups.some((mg) => selectedMuscleGroups.includes(mg))
-    if (aMatch !== bMatch) return aMatch ? -1 : 1
+    const rankDiff = matchRank(b) - matchRank(a)
+    if (rankDiff !== 0) return rankDiff
     return (freq.get(b.id) || 0) - (freq.get(a.id) || 0)
   })
 

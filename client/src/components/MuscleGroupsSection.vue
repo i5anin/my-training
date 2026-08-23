@@ -71,7 +71,7 @@ async function deleteGroup(g: MuscleGroup) {
       <div v-for="g in catalogStore.muscleGroups" :key="g.id" class="mg-item">
         <Tooltip>
           <TooltipTrigger as-child>
-            <span class="mg-icon-hit"><MgIcon :id="g.id" :size="22" /></span>
+            <span class="mg-icon-hit"><MgIcon :id="g.id" :size="22" bare /></span>
           </TooltipTrigger>
           <TooltipContent>id: {{ g.id }}</TooltipContent>
         </Tooltip>

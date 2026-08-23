@@ -108,7 +108,7 @@ const metric = ref<'1rm' | 'vol'>('1rm')
             <button
               class="mgf" :class="{ active: filterMg === mg }"
               @click="filterMg = filterMg === mg ? 'all' : mg"
-            ><MgIcon :id="mg" :size="16" /></button>
+            ><MgIcon :id="mg" :size="16" bare /></button>
           </TooltipTrigger>
           <TooltipContent>
             {{ catalogStore.muscleGroups.find(m => m.id === mg)?.label ?? mg }}

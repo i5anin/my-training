@@ -130,7 +130,7 @@ function goToday() { year.value = dayjs().year() }
                 >
                   <span class="cal-day-num">{{ cell.day }}</span>
                   <div class="cal-day-icons">
-                    <MgIcon v-for="id in mgIconsFor(cell.workouts)" :key="id" :id="id" :size="11" />
+                    <MgIcon v-for="id in mgIconsFor(cell.workouts)" :key="id" :id="id" :size="11" bare />
                   </div>
                 </div>
               </TooltipTrigger>

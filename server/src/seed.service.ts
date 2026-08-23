@@ -3,6 +3,8 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { MuscleGroupsService } from './muscle-groups/muscle-groups.service';
 import { ExercisesService } from './exercises/exercises.service';
+import { MUSCLE_INVOLVEMENT } from './exercises/muscle-involvement';
+import { UsersService } from './users/users.service';
 
 const DEFAULT_MUSCLE_GROUPS = [
   { id: 'chest', label: 'Грудь' },
@@ -12,6 +14,16 @@ const DEFAULT_MUSCLE_GROUPS = [
   { id: 'legs', label: 'Ноги' },
   { id: 'core', label: 'Пресс' },
   { id: 'cardio', label: 'Кардио' },
+  { id: 'stretching', label: 'Растяжка' },
+];
+
+/**
+ * Маркеры вида нагрузки. Лежат в справочнике групп по историческим
+ * причинам; интерфейс показывает их отдельной меткой, а не как мышцу.
+ */
+const KIND_MARKERS = [
+  { id: 'cardio', label: 'Кардио' },
+  { id: 'stretching', label: 'Растяжка' },
 ];
 
 const DEFAULT_EXERCISES = [
@@ -63,6 +75,7 @@ const DEFAULT_EXERCISES = [
   { id: 'bike', name: 'Велотренажер', muscleGroups: ['cardio'] },
   { id: 'rowing', name: 'Гребной тренажер', muscleGroups: ['cardio', 'back'] },
   { id: 'jump-rope', name: 'Скакалка', muscleGroups: ['cardio', 'legs'] },
+  { id: 'swimming', name: 'Плавание', muscleGroups: ['cardio', 'lats', 'shoulders'] },
 ];
 
 @Injectable()
@@ -71,6 +84,7 @@ export class SeedService implements OnModuleInit {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly muscleGroupsService: MuscleGroupsService,
     private readonly exercisesService: ExercisesService,
+    private readonly usersService: UsersService,
   ) {}
 
   async onModuleInit() {
@@ -88,6 +102,35 @@ export class SeedService implements OnModuleInit {
       for (const exercise of DEFAULT_EXERCISES) {
         await this.exercisesService.upsert(exercise);
       }
+    }
+
+    for (const marker of KIND_MARKERS) {
+      await this.muscleGroupsService.upsert(marker);
+    }
+
+    await this.usersService.seedOwner();
+    await this.backfillMuscleInvolvement();
+  }
+
+  /**
+   * Разметка мышц по уровню нагрузки для упражнений, где она ещё не задана.
+   * Трогает только записи с пустым secondaryMuscleGroups — ручные правки
+   * каталога после этого сохраняются.
+   */
+  private async backfillMuscleInvolvement() {
+    const exercises = await this.exercisesService.findAll();
+
+    for (const exercise of exercises) {
+      if (exercise.secondaryMuscleGroups) continue;
+
+      const involvement = MUSCLE_INVOLVEMENT[exercise.id];
+      if (!involvement) continue;
+
+      await this.exercisesService.upsert({
+        ...exercise,
+        muscleGroups: involvement.primary,
+        secondaryMuscleGroups: involvement.secondary,
+      });
     }
   }
 

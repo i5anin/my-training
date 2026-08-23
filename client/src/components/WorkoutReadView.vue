@@ -7,6 +7,10 @@ import { useCatalogStore } from '@/stores/catalogStore'
 import { getPhotoUrl } from '@/db'
 import { isBigThree } from '@/composables/bigThree'
 import MgIcon from '@/components/MgIcon.vue'
+import MgChip from '@/components/MgChip.vue'
+import { distinctByLetter } from '@/constants/muscleGroupIcons'
+import KindBadge from '@/components/KindBadge.vue'
+import { kindOf, kindsIn, musclesOnly } from '@/constants/workloadKinds'
 
 dayjs.locale('ru')
 
@@ -16,12 +20,33 @@ const catalog = useCatalogStore()
 
 const dateLabel = computed(() => dayjs(props.workout.date).format('dd, D MMMM YYYY'))
 
-const groups = computed(() =>
-  (props.workout.muscleGroups || []).map((id) => ({
-    id,
-    label: catalog.muscleGroups.find((g) => g.id === id)?.label ?? id,
-  })),
-)
+// Мышцы всей тренировки: собираются из упражнений, а не только из
+// групп, которыми сессия помечена — в шапке виден полный охват
+const groups = computed(() => {
+  const active: string[] = [...(props.workout.muscleGroups || [])]
+  const weak: string[] = []
+
+  for (const entry of props.workout.entries || []) {
+    const exercise = catalog.getExerciseById(entry.exerciseId)
+    if (!exercise) continue
+    for (const id of exercise.muscleGroups) {
+      if (!active.includes(id)) active.push(id)
+    }
+    for (const id of exercise.secondaryMuscleGroups || []) {
+      if (!weak.includes(id)) weak.push(id)
+    }
+  }
+
+  const weakOnly = weak.filter((id) => !active.includes(id))
+
+  return {
+    // Вид нагрузки идёт отдельной меткой: кардио и растяжка не мышцы
+    kinds: kindsIn([...active, ...weakOnly]),
+    letters: distinctByLetter(musclesOnly(active)),
+    active: musclesOnly(active),
+    weak: musclesOnly(weakOnly),
+  }
+})
 
 // Колонка = основной подход; добивки прикрепляются под него,
 // как в редакторе, а не занимают собственную колонку
@@ -48,10 +73,17 @@ function exName(id: string) {
   return catalog.getExerciseById(id)?.name ?? id
 }
 
-// Главная (первая) группа мышц конкретного упражнения — не всей
-// тренировки: у одной сессии могут быть упражнения на разные группы
-function primaryGroup(exerciseId: string): string | null {
-  return catalog.getExerciseById(exerciseId)?.muscleGroups?.[0] ?? null
+// Активные мышцы конкретного упражнения — не всей тренировки: у одной
+// сессии могут быть упражнения на разные группы. Слабо активные в
+// таблице не показываются, они видны в каталоге
+function primaryGroups(exerciseId: string): string[] {
+  return musclesOnly(catalog.getExerciseById(exerciseId)?.muscleGroups ?? [])
+}
+
+/** Вид нагрузки упражнения; силовое не подписываем — оно по умолчанию */
+function exerciseKind(exerciseId: string) {
+  const kind = kindOf(catalog.getExerciseById(exerciseId))
+  return kind.id === 'strength' ? null : kind
 }
 </script>
 
@@ -62,9 +94,10 @@ function primaryGroup(exerciseId: string): string | null {
       <span class="rv-id">Тренировка #{{ workout.id }}</span>
       <span class="rv-date">{{ dateLabel }}</span>
       <span class="rv-groups">
-        <span v-for="g in groups" :key="g.id" class="rv-group">
-          <MgIcon :id="g.id" :size="16" />{{ g.label }}
-        </span>
+        <KindBadge v-for="k in groups.kinds" :key="k.id" :kind="k" />
+        <MgIcon v-for="id in groups.letters" :key="id" :id="id" :size="18" />
+        <MgChip v-for="id in groups.active" :key="id" :id="id" plain />
+        <MgChip v-for="id in groups.weak" :key="id" :id="id" plain muted />
       </span>
     </div>
     <p v-if="workout.description" class="rv-desc">{{ workout.description }}</p>
@@ -114,7 +147,14 @@ function primaryGroup(exerciseId: string): string | null {
             </template>
           </td>
           <td class="rv-mg">
-            <MgIcon v-if="primaryGroup(e.exerciseId)" :id="primaryGroup(e.exerciseId)!" :size="26" />
+            <span class="rv-mg-chips">
+              <KindBadge v-if="exerciseKind(e.exerciseId)" :kind="exerciseKind(e.exerciseId)!" />
+              <MgIcon
+                v-for="id in distinctByLetter(primaryGroups(e.exerciseId))" :key="id"
+                :id="id" :size="22"
+              />
+              <MgChip v-for="id in primaryGroups(e.exerciseId)" :key="id" :id="id" plain />
+            </span>
           </td>
         </tr>
       </tbody>
@@ -159,15 +199,8 @@ function primaryGroup(exerciseId: string): string | null {
 
 .rv-groups {
   display: inline-flex;
-  gap: 12px;
-}
-
-.rv-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: #5a8;
-  font-size: 0.85rem;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .rv-desc {
@@ -277,8 +310,13 @@ function primaryGroup(exerciseId: string): string | null {
 }
 
 .rv-mg {
-  text-align: center;
   padding-left: 16px;
+}
+.rv-mg-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
 }
 
 .rv-legend {

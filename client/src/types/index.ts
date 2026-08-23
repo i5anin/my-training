@@ -6,7 +6,10 @@ export interface MuscleGroup {
 export interface Exercise {
   id: string
   name: string
+  /** Мышцы под основной нагрузкой — в интерфейсе красные */
   muscleGroups: string[]
+  /** Мышцы, работающие слабо (ассистенты, стабилизаторы) — жёлтые */
+  secondaryMuscleGroups?: string[] | null
   /** Вес грифа по умолчанию, кг — учитывается в статистике */
   barWeight?: number | null
 }
@@ -50,6 +53,18 @@ export interface PhotoRecord {
   blob: Blob
   thumbnail: Blob
   createdAt: string
+}
+
+export interface User {
+  id: string
+  name: string
+  /** Владелец базы — профиль, созданный при первом запуске */
+  isOwner?: boolean
+  /** Провайдер входа: vk | yandex | google | null для локального */
+  provider?: string | null
+  weightKg?: number | null
+  heightCm?: number | null
+  createdAt?: string
 }
 
 export interface UserSettings {
