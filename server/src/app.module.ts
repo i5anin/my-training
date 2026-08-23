@@ -7,11 +7,13 @@ import { join } from 'path';
 import { MuscleGroup } from './muscle-groups/muscle-group.entity';
 import { Exercise } from './exercises/exercise.entity';
 import { Workout } from './workouts/workout.entity';
+import { User } from './users/user.entity';
 import { ExerciseEntry } from './exercise-entries/exercise-entry.entity';
 import { SetRow } from './set-rows/set-row.entity';
 import { MuscleGroupsModule } from './muscle-groups/muscle-groups.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { WorkoutsModule } from './workouts/workouts.module';
+import { UsersModule } from './users/users.module';
 import { PhotosModule } from './photos/photos.module';
 import { SeedService } from './seed.service';
 import { DataController } from './data.controller';
@@ -31,6 +33,7 @@ import { CardLog } from './telegram/technique/card-log.entity';
         MuscleGroup,
         Exercise,
         Workout,
+        User,
         ExerciseEntry,
         SetRow,
         DigestLog,
@@ -164,6 +167,7 @@ import { CardLog } from './telegram/technique/card-log.entity';
     MuscleGroupsModule,
     ExercisesModule,
     WorkoutsModule,
+    UsersModule,
     PhotosModule,
     TelegramModule,
   ],

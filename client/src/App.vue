@@ -10,6 +10,7 @@ import CalendarView from '@/views/CalendarView.vue'
 import ProgramsView from '@/views/ProgramsView.vue'
 import ProgressSummary from '@/components/ProgressSummary.vue'
 import NavRail from '@/components/NavRail.vue'
+import AppHeader from '@/components/AppHeader.vue'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Dumbbell, LineChart } from 'lucide-vue-next'
 
@@ -77,6 +78,8 @@ onMounted(async () => {
 
 <template>
   <TooltipProvider :delay-duration="300">
+  <div class="app-root">
+  <AppHeader />
   <div class="app-shell">
     <!-- ─── Левое меню: лого + вкладки ─── -->
     <NavRail :active-tab="activePanel" @select="goTab" />
@@ -125,6 +128,7 @@ onMounted(async () => {
         </div>
       </main>
     </div>
+  </div>
   </div>
   </TooltipProvider>
 </template>
@@ -179,9 +183,16 @@ html, body {
 </style>
 
 <style scoped>
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
 .app-shell {
   display: flex;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
 }
 
 .app-layout {

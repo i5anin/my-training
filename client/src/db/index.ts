@@ -1,4 +1,4 @@
-import type { Workout, Exercise, MuscleGroup } from '@/types'
+import type { Workout, Exercise, MuscleGroup, User } from '@/types'
 
 const API = '/api'
 
@@ -66,6 +66,15 @@ export async function saveMuscleGroup(group: MuscleGroup): Promise<void> {
 
 export async function deleteMuscleGroup(id: string): Promise<void> {
   await json(`/muscle-groups/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+// Users
+export async function getAllUsers(): Promise<User[]> {
+  return json('/users')
+}
+
+export async function saveUser(user: User): Promise<void> {
+  await post('/users', user)
 }
 
 // Photos
