@@ -7,7 +7,7 @@ import { deleteWorkout, exportAll, importAll } from '@/db'
 import { formatDate, gapDays, type WorkoutListRow } from '@/composables/workoutFormat'
 import { useCollapsedMonths } from '@/composables/useCollapsedMonths'
 import WorkoutRow from '@/components/WorkoutRow.vue'
-import { Upload, Download, Clock, Plus, ChevronDown, ChevronsDownUp } from 'lucide-vue-next'
+import { Upload, Download, Plus, ChevronDown, ChevronsDownUp } from 'lucide-vue-next'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import type { Workout } from '@/types'
 import dayjs from 'dayjs'
@@ -204,13 +204,12 @@ async function doImport() {
             <th class="th-date">Дата</th>
             <th class="th-mg">Мышцы</th>
             <th class="th-ex">Упр.</th>
-            <th class="th-time"><Clock class="size-3.5 inline" /></th>
             <th class="th-act"></th>
           </tr>
         </thead>
         <tbody v-for="g in groups" :key="g.key">
           <tr class="month-row" @click="toggleMonth(g.key)">
-            <td colspan="6" class="month-cell">
+            <td colspan="5" class="month-cell">
               <ChevronDown class="size-3 month-chevron" :class="{ 'month-chevron-collapsed': collapsed.has(g.key) }" />
               <span class="month-label">{{ g.label }}</span>
               <span class="month-count">{{ g.workouts.length }}</span>
@@ -242,13 +241,6 @@ async function doImport() {
   overflow: hidden;
   padding: 10px;
   container-type: inline-size;
-}
-
-/* Узкая панель — колонка времени не влезает, прячем (ячейки строк прячет WorkoutRow) */
-@container (max-width: 420px) {
-  .th-time {
-    display: none;
-  }
 }
 
 .top-bar {
@@ -292,10 +284,17 @@ async function doImport() {
 }
 
 .wt {
+  /* Ширина у всех колонок: остаток делится пропорционально, а не
+     собирается пустотой в одной */
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.8rem;
 }
+
+/* Ширины задаёт шапка (table-layout: fixed); мышцы — под три бейджа */
+.th-id { width: 38px; } .th-date { width: 80px; }
+.th-mg { width: 72px; } .th-ex, .th-act { width: 46px; }
 
 .month-row {
   cursor: pointer;
@@ -310,16 +309,12 @@ async function doImport() {
   border-bottom: 1px solid #222;
 }
 
-/* SVG lucide — display:block, без flex переносится на свою строку */
-.month-cell {
-  display: flex;
-  align-items: center;
-}
-
 .month-chevron {
+  /* SVG lucide — display:block, иначе переносится на свою строку */
+  display: inline-block;
+  vertical-align: -2px;
   color: #555;
   margin-right: 4px;
-  flex-shrink: 0;
   transition: transform 0.15s ease;
 }
 

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useCatalogStore } from '@/stores/catalogStore'
 import MgIcon from '@/components/MgIcon.vue'
 import {
-  formatDate, fmtDuration, fmtGap, setsCount,
+  formatDate, fmtGap, setsCount,
   GAP_WARN_DAYS, type WorkoutListRow,
 } from '@/composables/workoutFormat'
 import { Copy, X } from 'lucide-vue-next'
@@ -67,7 +67,7 @@ const totalSets = computed(() => setsCount(props.workout.entries))
       <TooltipTrigger as-child>
         <td class="td-mg">
           <span v-for="id in (workout.muscleGroups || [])" :key="id" class="mg-icon-wrap">
-            <MgIcon :id="id" :size="22" />
+            <MgIcon :id="id" :size="22" bare />
           </span>
         </td>
       </TooltipTrigger>
@@ -76,17 +76,13 @@ const totalSets = computed(() => setsCount(props.workout.entries))
     <Tooltip>
       <TooltipTrigger as-child>
         <td class="td-ex">
-          {{ (workout.entries || []).length }}<span class="td-sets" v-if="totalSets"> / {{ totalSets }}</span>
+          {{ (workout.entries || []).length }}<span class="td-sets" v-if="totalSets"> · {{ totalSets }}</span>
         </td>
       </TooltipTrigger>
       <TooltipContent>
         Упражнений: {{ (workout.entries || []).length }} · подходов: {{ totalSets }}
       </TooltipContent>
     </Tooltip>
-    <td class="td-time">
-      <span v-if="workout.totalEditMs && workout.totalEditMs > 0" class="time-badge">{{ fmtDuration(workout.totalEditMs) }}</span>
-      <span v-else class="time-none">—</span>
-    </td>
     <td class="td-act" @click.stop>
       <Tooltip>
         <TooltipTrigger as-child>
@@ -121,18 +117,10 @@ td {
   vertical-align: middle;
 }
 
-/* Узкая панель — колонка времени не влезает, прячем (заголовок колонки прячет родитель) */
-@container (max-width: 420px) {
-  .td-time {
-    display: none;
-  }
-}
-
 .td-id {
   font-weight: bold;
   color: #5a8;
   white-space: nowrap;
-  width: 36px;
 }
 
 .dup-badge {
@@ -156,7 +144,6 @@ td {
   white-space: nowrap;
   color: #888;
   font-size: 0.74rem;
-  width: 82px;
 }
 
 .td-gap {
@@ -172,7 +159,6 @@ td {
 
 .td-mg {
   white-space: nowrap;
-  width: 60px;
 }
 
 .mg-icon-wrap {
@@ -184,9 +170,6 @@ td {
   color: #888;
   white-space: nowrap;
   text-align: center;
-  /* 36px обрезал двузначные значения вида «10 / 44» — .table-wrap
-     родителя режет overflow-x, лишний текст просто пропадал */
-  width: 52px;
 }
 
 .td-sets {
@@ -194,27 +177,9 @@ td {
   font-size: 0.72rem;
 }
 
-.td-time {
-  text-align: right;
-  white-space: nowrap;
-  width: 52px;
-}
-
-.time-badge {
-  color: #5a8;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.time-none {
-  color: #333;
-  font-size: 0.75rem;
-}
-
 .td-act {
   text-align: right;
   white-space: nowrap;
-  width: 56px;
 }
 
 /* Иконки действий в строке */
