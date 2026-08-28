@@ -1,15 +1,48 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useCatalogStore } from '@/stores/catalogStore'
 import MgIcon from '@/components/MgIcon.vue'
-import { X, Plus } from 'lucide-vue-next'
+import { X, Plus, ChevronDown, ChevronRight } from 'lucide-vue-next'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { plural, slug } from '@/composables/textFormat'
 import { useCatalogUsage } from '@/composables/useCatalogUsage'
+import { FAMILY_CHILDREN, FAMILY_GROUPS } from '@/constants/muscleGroupIcons'
 import type { MuscleGroup } from '@/types'
 
 const catalogStore = useCatalogStore()
 const { groupUsage } = useCatalogUsage()
+
+// ─── Дерево: семья и её детальные группы ────────────────
+const collapsed = ref(new Set<string>())
+
+function toggleFamily(id: string) {
+  const next = new Set(collapsed.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  collapsed.value = next
+}
+
+const byId = computed(
+  () => new Map(catalogStore.muscleGroups.map((g) => [g.id, g] as const)),
+)
+
+/** Семьи в порядке справочника, каждая со своими детальными группами */
+const tree = computed(() => {
+  const known = new Set<string>()
+  const families = catalogStore.muscleGroups
+    .filter((g) => FAMILY_GROUPS.has(g.id))
+    .map((family) => {
+      known.add(family.id)
+      const children = (FAMILY_CHILDREN[family.id] ?? [])
+        .map((id) => byId.value.get(id))
+        .filter((g): g is MuscleGroup => Boolean(g))
+      children.forEach((c) => known.add(c.id))
+      return { family, children }
+    })
+  // Группы вне семей — например добавленные руками
+  const orphans = catalogStore.muscleGroups.filter((g) => !known.has(g.id))
+  return { families, orphans }
+})
 
 // ─── Добавление ─────────────────────────────────────────
 const newGroupLabel = ref('')
@@ -66,9 +99,48 @@ async function deleteGroup(g: MuscleGroup) {
       <button class="btn-add" @click="addGroup" :disabled="!newGroupLabel.trim()"><Plus class="size-4" /></button>
     </div>
 
-    <!-- Список -->
+    <!-- Список: семьи разворачиваются, внутри детальные группы -->
     <div class="mg-list">
-      <div v-for="g in catalogStore.muscleGroups" :key="g.id" class="mg-item">
+      <template v-for="node in tree.families" :key="node.family.id">
+        <div class="mg-item mg-family">
+          <button
+            v-if="node.children.length"
+            class="mg-toggle"
+            @click="toggleFamily(node.family.id)"
+          >
+            <component
+              :is="collapsed.has(node.family.id) ? ChevronRight : ChevronDown"
+              class="size-3.5"
+            />
+          </button>
+          <span v-else class="mg-toggle mg-toggle-empty"></span>
+          <MgIcon :id="node.family.id" :size="22" bare />
+          <input
+            class="mg-label-input"
+            :value="node.family.label"
+            @blur="updateGroupLabel(node.family, $event)"
+            @keydown.enter="($event.target as HTMLInputElement).blur()"
+          />
+          <span class="mg-usage">{{ groupUsage.get(node.family.id) ?? 0 }}×</span>
+          <button class="del-btn" @click="deleteGroup(node.family)"><X class="size-3.5" /></button>
+        </div>
+        <div
+          v-for="child in collapsed.has(node.family.id) ? [] : node.children" :key="child.id"
+          class="mg-item mg-child"
+        >
+          <MgIcon :id="child.id" :size="18" bare />
+          <input
+            class="mg-label-input"
+            :value="child.label"
+            @blur="updateGroupLabel(child, $event)"
+            @keydown.enter="($event.target as HTMLInputElement).blur()"
+          />
+          <span class="mg-usage">{{ groupUsage.get(child.id) ?? 0 }}×</span>
+          <button class="del-btn" @click="deleteGroup(child)"><X class="size-3.5" /></button>
+        </div>
+      </template>
+
+      <div v-for="g in tree.orphans" :key="g.id" class="mg-item">
         <Tooltip>
           <TooltipTrigger as-child>
             <span class="mg-icon-hit"><MgIcon :id="g.id" :size="22" bare /></span>
@@ -99,6 +171,45 @@ async function deleteGroup(g: MuscleGroup) {
 </template>
 
 <style scoped>
+/* ── Дерево групп ── */
+.mg-family {
+  background: #141414;
+}
+
+.mg-child {
+  padding-left: 34px;
+}
+
+/* Детальные группы — бледные, как подписи мышц в других местах:
+   основные читаются первыми, уточнения не спорят с ними */
+.mg-child :deep(.mg-icon) {
+  opacity: 0.4;
+}
+
+.mg-child .mg-label-input {
+  color: #6b6b6b;
+  font-size: 0.8rem;
+}
+
+.mg-child .mg-usage {
+  color: #3c3c3c;
+}
+
+.mg-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+}
+.mg-toggle:hover { color: #aaa; }
+.mg-toggle-empty { cursor: default; }
+
 /* ── Форма добавления ── */
 .add-form {
   display: flex;

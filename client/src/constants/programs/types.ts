@@ -24,6 +24,8 @@ export interface ProgramDay {
   primaryType: string
   secondaryType?: string
   exercises: ProgramExercise[]
+  /** Пояснение к дню целиком: чем наполняется, где искать состав */
+  note?: string
 }
 
 export interface Program {

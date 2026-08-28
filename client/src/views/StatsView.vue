@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { useCatalogStore } from '@/stores/catalogStore'
 import { barOf, best1RM, mainSets, tonnage } from '@/composables/strength'
+import { isFamilyGroup } from '@/constants/muscleGroupIcons'
 import { isBigThree } from '@/composables/bigThree'
 import SparkCell from '@/components/SparkCell.vue'
 import MgIcon from '@/components/MgIcon.vue'
@@ -83,6 +84,13 @@ const activeMgs = computed(() => {
   return [...seen]
 })
 
+const familyMgs = computed(() => activeMgs.value.filter(isFamilyGroup))
+const detailedMgs = computed(() => activeMgs.value.filter((mg) => !isFamilyGroup(mg)))
+
+function mgLabel(id: string): string {
+  return catalogStore.muscleGroups.find((m) => m.id === id)?.label ?? id
+}
+
 const SW = 88, SH = 30
 
 // ─── Активная метрика ─────────────────────────────────────
@@ -103,17 +111,20 @@ const metric = ref<'1rm' | 'vol'>('1rm')
           class="mgf" :class="{ active: filterMg === 'all' }"
           @click="filterMg = 'all'"
         >Все</button>
-        <Tooltip v-for="mg in activeMgs" :key="mg">
+        <Tooltip v-for="mg in familyMgs" :key="mg">
           <TooltipTrigger as-child>
             <button
-              class="mgf" :class="{ active: filterMg === mg }"
+              class="mgf mgf-round" :class="{ active: filterMg === mg }"
               @click="filterMg = filterMg === mg ? 'all' : mg"
-            ><MgIcon :id="mg" :size="16" bare /></button>
+            ><MgIcon :id="mg" :size="18" bare /></button>
           </TooltipTrigger>
-          <TooltipContent>
-            {{ catalogStore.muscleGroups.find(m => m.id === mg)?.label ?? mg }}
-          </TooltipContent>
+          <TooltipContent>{{ mgLabel(mg) }}</TooltipContent>
         </Tooltip>
+        <button
+          v-for="mg in detailedMgs" :key="mg"
+          class="mgf" :class="{ active: filterMg === mg }"
+          @click="filterMg = filterMg === mg ? 'all' : mg"
+        >{{ mgLabel(mg) }}</button>
       </div>
     </div>
 
@@ -185,9 +196,9 @@ const metric = ref<'1rm' | 'vol'>('1rm')
 
 .mg-filter { display: flex; gap: 3px; flex-wrap: wrap; }
 .mgf {
-  padding: 2px 6px;
+  padding: 2px 8px;
   border: 1px solid #2a2a2a;
-  border-radius: 4px;
+  border-radius: 999px;
   background: #1a1a1a;
   color: #888;
   cursor: pointer;
@@ -195,6 +206,16 @@ const metric = ref<'1rm' | 'vol'>('1rm')
 }
 .mgf:hover { border-color: #5a8; }
 .mgf.active { border-color: #5a8; background: #1a2a22; }
+
+/* Кнопка с одним круглым бейджем: обводка повторяет круг, а не рамку */
+.mgf-round {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
 
 /* ── Список упражнений ── */
 .ex-list { display: flex; flex-direction: column; gap: 2px; }

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import type { SetRow } from '@/types'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { suggestReps, suggestWeight } from '@/suggestions'
+import { useWeightUnits, toDisplay, toPlates } from '@/composables/weightUnits'
 import { X } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -17,6 +18,10 @@ const emit = defineEmits<{
 }>()
 
 const workoutStore = useWorkoutStore()
+const { withBar } = useWeightUnits()
+const bar = computed(() => props.barWeight ?? 0)
+// Вес показывается и вводится в выбранной шкале; в базу идут блины
+const shownWeight = computed(() => toDisplay(props.modelValue.weight, bar.value))
 const weightSugg = computed(() => suggestWeight(props.exerciseId, workoutStore.workouts))
 const repsSugg  = computed(() => suggestReps(props.exerciseId, workoutStore.workouts))
 
@@ -28,18 +33,26 @@ const repsInputRef   = ref<HTMLInputElement>()
 const weightOpen  = ref(false)
 const weightQuery = ref('')
 const filteredWeights = computed(() => {
+  const all = weightSugg.value.all.map((w) => toDisplay(w, bar.value))
   const q = weightQuery.value
-  return q ? weightSugg.value.all.filter(w => String(w).includes(q)) : weightSugg.value.all
+  return q ? all.filter((w) => String(w).includes(q)) : all
 })
 // На фокусе показываем ВСЕ варианты (пустой query), фильтр — только после ввода
 function onWeightFocus() { weightQuery.value = ''; weightOpen.value = true }
 function onWeightInput(e: Event) {
   const v = (e.target as HTMLInputElement).value
   weightQuery.value = v; weightOpen.value = true
-  emit('update:modelValue', { ...props.modelValue, weight: parseFloat(v) || 0 })
+  emit('update:modelValue', {
+    ...props.modelValue,
+    weight: toPlates(parseFloat(v) || 0, bar.value),
+  })
 }
 function onWeightBlur() { setTimeout(() => { weightOpen.value = false }, 150) }
-function pickWeight(w: number) { weightQuery.value = String(w); weightOpen.value = false; emit('update:modelValue', { ...props.modelValue, weight: w }) }
+function pickWeight(w: number) {
+  weightQuery.value = String(w)
+  weightOpen.value = false
+  emit('update:modelValue', { ...props.modelValue, weight: toPlates(w, bar.value) })
+}
 function onWeightEnter() {
   weightOpen.value = false
   repsInputRef.value?.focus()
@@ -74,8 +87,8 @@ function onRepsEnter() {
       <input
         ref="weightInputRef"
         type="number"
-        :value="modelValue.weight"
-        :placeholder="weightSugg.last ? String(weightSugg.last) : '0'"
+        :value="shownWeight"
+        :placeholder="weightSugg.last ? String(toDisplay(weightSugg.last, bar)) : '0'"
         class="cell-input"
         @input="onWeightInput"
         @focus="onWeightFocus"
@@ -84,7 +97,7 @@ function onRepsEnter() {
       />
       <div class="dropdown" v-if="weightOpen && filteredWeights.length">
         <button v-for="w in filteredWeights" :key="w" class="dd-item"
-          :class="{ active: modelValue.weight === w }"
+          :class="{ active: shownWeight === w }"
           @mousedown.prevent="pickWeight(w)">{{ w }}</button>
       </div>
     </div>
@@ -111,7 +124,7 @@ function onRepsEnter() {
       </div>
     </div>
 
-    <span v-if="barWeight" class="real-w">={{ modelValue.weight + barWeight }}</span>
+    <span v-if="barWeight && !withBar" class="real-w">={{ modelValue.weight + barWeight }}</span>
     <button class="rm" @click="emit('remove')"><X class="size-3" /></button>
   </div>
 </template>

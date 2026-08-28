@@ -17,6 +17,12 @@ const DEFAULT_MUSCLE_GROUPS = [
   { id: 'stretching', label: 'Растяжка' },
 ];
 
+/** Детальные группы, которых не было в первой версии справочника */
+const EXTRA_MUSCLE_GROUPS = [
+  { id: 'front-delts', label: 'Передние дельты' },
+  { id: 'side-delts', label: 'Средние дельты' },
+];
+
 /**
  * Маркеры вида нагрузки. Лежат в справочнике групп по историческим
  * причинам; интерфейс показывает их отдельной меткой, а не как мышцу.
@@ -104,8 +110,8 @@ export class SeedService implements OnModuleInit {
       }
     }
 
-    for (const marker of KIND_MARKERS) {
-      await this.muscleGroupsService.upsert(marker);
+    for (const group of [...KIND_MARKERS, ...EXTRA_MUSCLE_GROUPS]) {
+      await this.muscleGroupsService.upsert(group);
     }
 
     await this.usersService.seedOwner();

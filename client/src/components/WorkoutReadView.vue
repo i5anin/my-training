@@ -8,9 +8,11 @@ import { getPhotoUrl } from '@/db'
 import { isBigThree } from '@/composables/bigThree'
 import MgIcon from '@/components/MgIcon.vue'
 import MgChip from '@/components/MgChip.vue'
+import ExerciseThumb from '@/components/ExerciseThumb.vue'
+import ExerciseTags from '@/components/ExerciseTags.vue'
 import { distinctByLetter } from '@/constants/muscleGroupIcons'
-import KindBadge from '@/components/KindBadge.vue'
-import { kindOf, kindsIn, musclesOnly } from '@/constants/workloadKinds'
+import TagBadge from '@/components/TagBadge.vue'
+import { kindsIn, musclesOnly } from '@/constants/workloadKinds'
 
 dayjs.locale('ru')
 
@@ -73,18 +75,6 @@ function exName(id: string) {
   return catalog.getExerciseById(id)?.name ?? id
 }
 
-// Активные мышцы конкретного упражнения — не всей тренировки: у одной
-// сессии могут быть упражнения на разные группы. Слабо активные в
-// таблице не показываются, они видны в каталоге
-function primaryGroups(exerciseId: string): string[] {
-  return musclesOnly(catalog.getExerciseById(exerciseId)?.muscleGroups ?? [])
-}
-
-/** Вид нагрузки упражнения; силовое не подписываем — оно по умолчанию */
-function exerciseKind(exerciseId: string) {
-  const kind = kindOf(catalog.getExerciseById(exerciseId))
-  return kind.id === 'strength' ? null : kind
-}
 </script>
 
 <template>
@@ -94,7 +84,7 @@ function exerciseKind(exerciseId: string) {
       <span class="rv-id">Тренировка #{{ workout.id }}</span>
       <span class="rv-date">{{ dateLabel }}</span>
       <span class="rv-groups">
-        <KindBadge v-for="k in groups.kinds" :key="k.id" :kind="k" />
+        <TagBadge v-for="k in groups.kinds" :key="k.id" :label="k.label" :color="k.color" />
         <MgIcon v-for="id in groups.letters" :key="id" :id="id" :size="18" />
         <MgChip v-for="id in groups.active" :key="id" :id="id" plain />
         <MgChip v-for="id in groups.weak" :key="id" :id="id" plain muted />
@@ -118,7 +108,12 @@ function exerciseKind(exerciseId: string) {
           :key="e.id"
           :class="{ 'big-three': isBigThree(e.exerciseId) }"
         >
-          <td class="rv-num">{{ i + 1 }}</td>
+          <td class="rv-num">
+            <span class="rv-num-cell">
+              {{ i + 1 }}
+              <ExerciseThumb :exercise-id="e.exerciseId" :size="46" />
+            </span>
+          </td>
           <td class="rv-ex">
             <div class="rv-ex-name">{{ exName(e.exerciseId) }}</div>
             <div v-if="e.description" class="rv-ex-note">{{ e.description }}</div>
@@ -147,14 +142,7 @@ function exerciseKind(exerciseId: string) {
             </template>
           </td>
           <td class="rv-mg">
-            <span class="rv-mg-chips">
-              <KindBadge v-if="exerciseKind(e.exerciseId)" :kind="exerciseKind(e.exerciseId)!" />
-              <MgIcon
-                v-for="id in distinctByLetter(primaryGroups(e.exerciseId))" :key="id"
-                :id="id" :size="22"
-              />
-              <MgChip v-for="id in primaryGroups(e.exerciseId)" :key="id" :id="id" plain />
-            </span>
+            <ExerciseTags :exercise-id="e.exerciseId" />
           </td>
         </tr>
       </tbody>
@@ -240,7 +228,8 @@ function exerciseKind(exerciseId: string) {
 
 .rv-num {
   color: #555;
-  width: 30px;
+  /* Номер плюс портретная миниатюра */
+  width: 92px;
 }
 
 .rv-ex {
@@ -312,11 +301,10 @@ function exerciseKind(exerciseId: string) {
 .rv-mg {
   padding-left: 16px;
 }
-.rv-mg-chips {
+.rv-num-cell {
   display: inline-flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .rv-legend {

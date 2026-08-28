@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { Users, Dumbbell, LogIn, LogOut } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/userStore'
+import { useWeightUnits } from '@/composables/weightUnits'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import AuthPanel from '@/components/AuthPanel.vue'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
@@ -13,6 +14,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
  */
 const userStore = useUserStore()
 const workoutStore = useWorkoutStore()
+const { withBar, toggle: toggleWeightScale } = useWeightUnits()
 const authOpen = ref(false)
 
 onMounted(() => userStore.load())
@@ -45,6 +47,19 @@ const initial = computed(
           </span>
         </TooltipTrigger>
         <TooltipContent>Профилей в проекте: {{ userStore.count }}</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button class="ah-btn" @click="toggleWeightScale()">
+            {{ withBar ? 'с грифом' : 'блины' }}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          Шкала веса в подходах: {{ withBar
+            ? 'полный вес вместе с грифом'
+            : 'только блины, как в тетради' }}
+        </TooltipContent>
       </Tooltip>
 
       <template v-if="userStore.current">

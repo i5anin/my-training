@@ -8,6 +8,7 @@ import StatsView from '@/views/StatsView.vue'
 import CatalogView from '@/views/CatalogView.vue'
 import CalendarView from '@/views/CalendarView.vue'
 import ProgramsView from '@/views/ProgramsView.vue'
+import AnomaliesView from '@/views/AnomaliesView.vue'
 import ProgressSummary from '@/components/ProgressSummary.vue'
 import NavRail from '@/components/NavRail.vue'
 import AppHeader from '@/components/AppHeader.vue'
@@ -19,11 +20,11 @@ const workoutStore = useWorkoutStore()
 const route = useRoute()
 const router = useRouter()
 
-type Tab = 'workouts' | 'stats' | 'catalog' | 'calendar' | 'programs'
+type Tab = 'workouts' | 'stats' | 'catalog' | 'calendar' | 'programs' | 'anomalies'
 const activePanel = computed<Tab>(() => (route.meta.tab as Tab) ?? 'workouts')
 
 // Вкладки без правой панели — занимают весь экран
-const FULL_WIDTH_TABS = new Set<Tab>(['catalog', 'calendar', 'programs'])
+const FULL_WIDTH_TABS = new Set<Tab>(['catalog', 'calendar', 'programs', 'anomalies'])
 const isFullWidth = computed(() => FULL_WIDTH_TABS.has(activePanel.value))
 
 // Маршруты, которые показывают что-то в правой панели
@@ -33,7 +34,7 @@ const hasRightContent = computed(() => RIGHT_PANEL_ROUTES.has(route.name as stri
 // Корневой маршрут каждой вкладки
 const TAB_ROUTES: Record<Tab, string> = {
   workouts: 'list', stats: 'stats', catalog: 'catalog', calendar: 'calendar',
-  programs: 'programs',
+  programs: 'programs', anomalies: 'anomalies',
 }
 
 // Сравнение по route.name: клик по активной вкладке с подмаршрута
@@ -96,6 +97,7 @@ onMounted(async () => {
           <StatsView v-else-if="activePanel === 'stats'" />
           <CalendarView v-else-if="activePanel === 'calendar'" />
           <ProgramsView v-else-if="activePanel === 'programs'" />
+          <AnomaliesView v-else-if="activePanel === 'anomalies'" />
           <CatalogView v-else />
         </div>
       </aside>

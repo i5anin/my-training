@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useCatalogStore } from '@/stores/catalogStore'
-import { ChevronDown, ChevronUp, X, Plus } from 'lucide-vue-next'
+import { Pencil, X, Plus } from 'lucide-vue-next'
+import { useCatalogSections } from '@/composables/catalogSections'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { isBigThree } from '@/composables/bigThree'
 import { plural, slug } from '@/composables/textFormat'
 import { useCatalogUsage } from '@/composables/useCatalogUsage'
-import { useMuscleInvolvement, cycleInvolvement } from '@/composables/muscleInvolvement'
-import ExerciseBadges from '@/components/ExerciseBadges.vue'
+import { useMuscleInvolvement } from '@/composables/muscleInvolvement'
+import ExerciseTags from '@/components/ExerciseTags.vue'
+import CatalogSectionHead from '@/components/CatalogSectionHead.vue'
+import ExerciseEditDialog from '@/components/ExerciseEditDialog.vue'
 import type { Exercise } from '@/types'
 
 const catalogStore = useCatalogStore()
@@ -50,30 +53,17 @@ const filteredExercises = computed(() => {
                  || a.name.localeCompare(b.name))
 })
 
+// ─── Группировка по семьям и подгруппам мышц ────────────
+/** При поиске секции раскрыты — иначе совпадения не видно */
+const searching = computed(() => exSearch.value.trim().length > 0)
+
+const { sections, toggle: toggleFamily, isOpen } = useCatalogSections(
+  filteredExercises,
+  computed(() => catalogStore.muscleGroups),
+  searching,
+)
+
 // ─── Редактирование и удаление ──────────────────────────
-async function updateExName(ex: Exercise, e: Event) {
-  const input = e.target as HTMLInputElement
-  const name = input.value
-  if (!name.trim() || name === ex.name) {
-    input.value = ex.name // переименование отклонено — вернуть прежнее значение
-    return
-  }
-  await catalogStore.addExercise({ ...ex, name: name.trim() })
-}
-
-async function cycleExMg(ex: Exercise, mgId: string) {
-  const next = cycleInvolvement(ex, mgId)
-  if (next) await catalogStore.addExercise({ ...ex, ...next })
-}
-
-/** Вес грифа упражнения: пусто или 0 — гриф не учитывается */
-async function updateExBar(ex: Exercise, e: Event) {
-  const raw = (e.target as HTMLInputElement).value.trim()
-  const bar = raw === '' ? null : Number(raw.replace(',', '.'))
-  if (bar !== null && (!Number.isFinite(bar) || bar < 0)) return
-  await catalogStore.addExercise({ ...ex, barWeight: bar })
-}
-
 async function deleteEx(ex: Exercise) {
   const used = exerciseUsage.value.get(ex.id) ?? 0
   const times = `${used} ${plural(used, 'тренировке', 'тренировках')}`
@@ -84,10 +74,7 @@ async function deleteEx(ex: Exercise) {
   await catalogStore.removeExercise(ex.id)
 }
 
-const expandedExId = ref<string | null>(null)
-function toggleExpand(id: string) {
-  expandedExId.value = expandedExId.value === id ? null : id
-}
+const editing = ref<Exercise | null>(null)
 </script>
 
 <template>
@@ -123,26 +110,32 @@ function toggleExpand(id: string) {
       </select>
     </div>
 
-    <!-- Список -->
+    <!-- Список по семьям мышц -->
     <div class="ex-list">
-      <div v-for="ex in filteredExercises" :key="ex.id"
-        class="ex-item"
-        :class="{ expanded: expandedExId === ex.id, 'big-three': isBigThree(ex.id) }">
-        <!-- Свёрнутая строка -->
-        <div class="ex-row">
-          <input
-            class="ex-name-input"
-            :value="ex.name"
-            @click.stop
-            @blur="updateExName(ex, $event)"
-            @keydown.enter="($event.target as HTMLInputElement).blur()"
+      <template v-for="sec in sections" :key="sec.id">
+        <CatalogSectionHead
+          :group-id="sec.id" :label="sec.label" :count="sec.count"
+          :open="isOpen(sec.id)" :level="1"
+          @toggle="toggleFamily(sec.id)"
+        />
+
+        <template v-for="grp in (isOpen(sec.id) ? sec.groups : [])" :key="grp.key">
+          <!-- Подгруппа: бицепс/трицепс у рук, широчайшие у спины -->
+          <CatalogSectionHead
+            v-if="grp.label"
+            :group-id="grp.id" :label="grp.label" :count="grp.exercises.length"
+            :open="isOpen(grp.key)" :level="2"
+            @toggle="toggleFamily(grp.key)"
           />
+
+          <div v-for="ex in (grp.label && !isOpen(grp.key) ? [] : grp.exercises)" :key="ex.id"
+            class="ex-item"
+            :class="{ 'big-three': isBigThree(ex.id), nested: !!grp.label }">
+        <div class="ex-row">
+          <span class="ex-name">{{ ex.name }}</span>
           <Tooltip>
             <TooltipTrigger as-child>
-              <button class="ex-mgs-btn" @click="toggleExpand(ex.id)">
-                <ExerciseBadges :exercise="ex" />
-                <component :is="expandedExId === ex.id ? ChevronUp : ChevronDown" class="size-3 text-muted-foreground" />
-              </button>
+              <span class="ex-mgs"><ExerciseTags :exercise-id="ex.id" /></span>
             </TooltipTrigger>
             <TooltipContent>{{ involvementHint(ex) }}</TooltipContent>
           </Tooltip>
@@ -154,41 +147,24 @@ function toggleExpand(id: string) {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger as-child>
-              <button class="del-btn" @click="deleteEx(ex)"><X class="size-3.5" /></button>
+              <button class="icon-btn" @click="editing = ex"><Pencil class="size-3.5" /></button>
+            </TooltipTrigger>
+            <TooltipContent>Редактировать</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <button class="icon-btn del-btn" @click="deleteEx(ex)"><X class="size-3.5" /></button>
             </TooltipTrigger>
             <TooltipContent>Удалить</TooltipContent>
           </Tooltip>
         </div>
-        <!-- Раскрытая часть: группы мышц и вес грифа -->
-        <div v-if="expandedExId === ex.id" class="ex-edit">
-          <button
-            v-for="mg in catalogStore.muscleGroups" :key="mg.id"
-            class="mg-pill"
-            :class="{
-              active: ex.muscleGroups.includes(mg.id),
-              weak: weakOf(ex).includes(mg.id),
-            }"
-            @click="cycleExMg(ex, mg.id)"
-          ><MgIcon :id="mg.id" :size="14" /> {{ mg.label }}</button>
-          <div class="mg-legend">нажатие: не работает → активная → слабо активная</div>
-
-          <!-- Гриф: прибавляется к весу блинов в статистике -->
-          <label class="bar-field">
-            Гриф, кг
-            <input
-              class="bar-input"
-              type="number"
-              step="0.25"
-              min="0"
-              :value="ex.barWeight ?? ''"
-              placeholder="0"
-              @change="updateExBar(ex, $event)"
-            />
-          </label>
-        </div>
-      </div>
+          </div>
+        </template>
+      </template>
       <div v-if="!filteredExercises.length" class="empty">Ничего не найдено</div>
     </div>
+
+    <ExerciseEditDialog v-if="editing" :exercise="editing" @close="editing = null" />
   </div>
 </template>
 
@@ -267,66 +243,31 @@ function toggleExpand(id: string) {
   overflow: hidden;
 }
 .ex-item:hover { background: #1a1a1a; }
-.ex-item.expanded {
-  background: #1a1a1a;
-  border-color: #2a3a32;
-}
-
+/* Колонки одной ширины во всех строках: название тянется,
+   метки и счётчик стоят строго друг под другом */
 .ex-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(0, 470px) 34px 22px 22px;
   align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
+  gap: 10px;
+  padding: 7px 10px;
 }
 
-.ex-name-input {
-  flex: 1;
+.ex-name {
   min-width: 0;
-  padding: 3px 6px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: #eee;
   font-size: 0.85rem;
 }
-.ex-name-input:hover { border-color: #2a2a2a; background: #0a0a0a; }
-.ex-name-input:focus { outline: none; border-color: #5a8; background: #0a0a0a; }
 
-.ex-mgs-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  flex-shrink: 0;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 3px 6px;
-  color: #888;
-  font-size: 0.85rem;
-  max-width: 130px;
-  overflow: hidden;
-}
-.ex-mgs-btn:hover { border-color: #2a2a2a; background: #0a0a0a; }
-.ex-item.expanded .ex-mgs-btn { border-color: #5a8; color: #5a8; }
-
-.ex-edit {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  padding: 6px 8px 8px;
-  border-top: 1px solid #2a2a2a;
-  background: #111;
+.ex-mgs {
+  display: block;
+  min-width: 0;
 }
 
-.ex-usage {
-  font-size: 0.65rem;
-  color: #444;
-  flex-shrink: 0;
-  min-width: 24px;
-  text-align: right;
-}
-
+/* ── Заголовок семьи мышц ── */
 /* ── Pill для группы мышц ── */
 .mg-pill {
   display: inline-flex;
@@ -343,14 +284,6 @@ function toggleExpand(id: string) {
 }
 .mg-pill:hover { border-color: #5a8; color: #5a8; }
 .mg-pill.active { border-color: #d4635c; background: #2a1a1a; color: #d4635c; }
-.mg-pill.weak { border-color: #d1a343; background: #2a2418; color: #d1a343; }
-
-.mg-legend {
-  flex-basis: 100%;
-  color: #555;
-  font-size: 0.65rem;
-}
-
 /* ── Удалить ── */
 .del-btn {
   background: none;

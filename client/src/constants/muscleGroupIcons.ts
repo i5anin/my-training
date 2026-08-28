@@ -27,6 +27,8 @@ export const MUSCLE_GROUP_IMAGES: Record<string, string> = {
   traps:       '/icons/traps.avif',
   'lower-back':'/icons/back.png',
   shoulders:   '/icons/shoulders.png',
+  'front-delts':'/icons/shoulders.png',
+  'side-delts':'/icons/shoulders.png',
   'rear-delts':'/icons/shoulders.png',
   arms:        '/icons/arms.png',
   biceps:      '/icons/arms.png',
@@ -60,7 +62,8 @@ export function getMuscleGroupImage(id: string): string | null {
 export const MUSCLE_GROUP_LETTERS: Record<string, string> = {
   chest: 'Г', // Грудь
   back: 'С', lats: 'С', traps: 'С', 'lower-back': 'С', // Спина
-  shoulders: 'Пл', 'rear-delts': 'Пл', // Плечи
+  // Кружок — на семью мышц: какая именно дельта, видно в подписи рядом
+  shoulders: 'Пл', 'front-delts': 'Пл', 'side-delts': 'Пл', 'rear-delts': 'Пл',
   arms: 'Р', forearms: 'Р', // Руки (общее, без уточнения головки)
   biceps: 'Б', // Бицепс
   triceps: 'Т', // Трицепс
@@ -68,6 +71,7 @@ export const MUSCLE_GROUP_LETTERS: Record<string, string> = {
   икры: 'И', // Икры
   core: 'Пр', obliques: 'Пр', // Пресс / Косые
   cardio: 'Кд', // Кардио
+  stretching: 'Рс', // Растяжка
 }
 
 /** Приглушённый акцентный цвет на семью — узнаваемый оттенок, без крикливой яркости */
@@ -75,7 +79,7 @@ export const MUSCLE_GROUP_COLORS: Record<string, string> = {
   chest: '#c97b76',
   back: '#7ba3d9', lats: '#7ba3d9', traps: '#7ba3d9', 'lower-back': '#7ba3d9',
   shoulders: '#cbb676',
-  'rear-delts': '#cbb676',
+  'front-delts': '#cbb676', 'side-delts': '#cbb676', 'rear-delts': '#cbb676',
   arms: '#76c98f', forearms: '#76c98f',
   biceps: '#c9945a',
   triceps: '#8a8ac9',
@@ -83,6 +87,7 @@ export const MUSCLE_GROUP_COLORS: Record<string, string> = {
   glutes: '#a67bc9', икры: '#a67bc9',
   core: '#c976a6', obliques: '#c976a6',
   cardio: '#76c9c4',
+  stretching: '#a3c976',
 }
 
 export function getMuscleGroupLetter(id: string): string {
@@ -131,4 +136,39 @@ export function distinctByLetter(ids: string[], taken = new Set<string>()): stri
 /** Слабые мышцы без тех, чья буква уже занята основными */
 export function distinctSecondary(primary: string[], secondary: string[]): string[] {
   return distinctByLetter(secondary, new Set(primary.map(getMuscleGroupLetter)))
+}
+
+/**
+ * Обобщённые группы: годятся для фильтра и буквы-бейджа, но не для
+ * подписи «какие мышцы работают» — там нужны конкретные.
+ */
+export const GENERIC_GROUPS = new Set(['back', 'legs', 'shoulders', 'arms'])
+
+export function detailedOnly(ids: string[]): string[] {
+  return ids.filter((id) => !GENERIC_GROUPS.has(id))
+}
+
+/**
+ * Основные группы — семьи мышц. У них есть узнаваемая буква, поэтому в
+ * фильтрах они показываются кружком; детальные группы (широчайшие,
+ * трапеция, дельты по пучкам) буквой не различить — им нужна надпись.
+ */
+export const FAMILY_GROUPS = new Set([
+  'chest', 'back', 'shoulders', 'arms', 'legs', 'core', 'cardio', 'stretching',
+])
+
+export function isFamilyGroup(id: string): boolean {
+  return FAMILY_GROUPS.has(id)
+}
+
+/** Детальные группы внутри семьи — для дерева в справочнике */
+export const FAMILY_CHILDREN: Record<string, string[]> = {
+  chest: [],
+  back: ['lats', 'traps', 'lower-back'],
+  shoulders: ['front-delts', 'side-delts', 'rear-delts'],
+  arms: ['biceps', 'triceps', 'forearms'],
+  legs: ['quadriceps', 'hamstrings', 'glutes', 'икры'],
+  core: ['obliques'],
+  cardio: [],
+  stretching: [],
 }
