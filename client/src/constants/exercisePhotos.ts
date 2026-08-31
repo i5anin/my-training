@@ -14,6 +14,9 @@ export interface ExercisePhoto {
 
 export const EXERCISE_PHOTOS: Record<string, ExercisePhoto> = {
   'pallof-press': { src: '/exercises/pallof-press.webp', landscape: true },
+  'cable-row': { src: '/exercises/cable-row.webp', landscape: true },
+  'chest-supported-row': { src: '/exercises/chest-supported-row.webp', landscape: true },
+  'lat-pulldown': { src: '/exercises/lat-pulldown.webp', landscape: true },
 }
 
 export function getExercisePhoto(id: string | undefined): ExercisePhoto | null {
