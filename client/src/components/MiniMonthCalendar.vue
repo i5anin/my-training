@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import dayjs from 'dayjs'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import type { Workout } from '@/types'
 
+const route = useRoute()
 const router = useRouter()
 const workoutStore = useWorkoutStore()
 
@@ -16,6 +17,7 @@ interface DayCell {
   day: number
   inMonth: boolean
   isToday: boolean
+  isSelected: boolean
   workouts: Workout[]
 }
 
@@ -30,6 +32,19 @@ const monthLabel = computed(() =>
 
 function prevMonth() { monthOffset.value-- }
 function nextMonth() { monthOffset.value++ }
+
+/** Дата открытой тренировки — её день подсвечен как выбранный */
+const selectedDate = computed(() => {
+  const id = Number(route.params.id)
+  if (!id) return null
+  return workoutStore.workouts.find((w) => w.id === id)?.date ?? null
+})
+
+// Открыли тренировку другого месяца — календарь переходит к нему сам
+watch(selectedDate, (date) => {
+  if (!date) return
+  monthOffset.value = dayjs(date).startOf('month').diff(today.startOf('month'), 'month')
+}, { immediate: true })
 
 const workoutsByDate = computed(() => {
   const map = new Map<string, Workout[]>()
@@ -49,9 +64,9 @@ const cells = computed<DayCell[]>(() => {
   const todayKey = today.format('YYYY-MM-DD')
   const out: DayCell[] = []
 
-  for (let i = 0; i < startWeekday; i++) {
-    out.push({ date: '', day: 0, inMonth: false, isToday: false, workouts: [] })
-  }
+  const empty = { date: '', day: 0, inMonth: false, isToday: false, isSelected: false, workouts: [] }
+
+  for (let i = 0; i < startWeekday; i++) out.push({ ...empty })
   for (let d = 1; d <= daysInMonth; d++) {
     const date = first.date(d).format('YYYY-MM-DD')
     out.push({
@@ -59,12 +74,11 @@ const cells = computed<DayCell[]>(() => {
       day: d,
       inMonth: true,
       isToday: date === todayKey,
+      isSelected: date === selectedDate.value,
       workouts: workoutsByDate.value.get(date) || [],
     })
   }
-  while (out.length % 7 !== 0) {
-    out.push({ date: '', day: 0, inMonth: false, isToday: false, workouts: [] })
-  }
+  while (out.length % 7 !== 0) out.push({ ...empty })
   return out
 })
 
@@ -94,6 +108,7 @@ function openDay(cell: DayCell) {
         :class="{
           'mc-day-empty': !cell.inMonth,
           'mc-day-today': cell.isToday,
+          'mc-day-selected': cell.isSelected,
           'mc-day-has': cell.workouts.length > 0,
         }"
         @click="openDay(cell)"
@@ -214,13 +229,35 @@ function openDay(cell: DayCell) {
   background: #223a2c;
 }
 
+/* Сегодня — рамка. Видна и на пустом дне, и на дне с тренировкой */
 .mc-day-today {
-  border: 1px solid #2a7a4a;
-  color: #5a8;
+  box-shadow: inset 0 0 0 2px #2a7a4a;
+  color: #7ec9a3;
   font-weight: 700;
 }
 
 .mc-day-today .mc-day-dot {
   background: #8fd;
+}
+
+/* Открытая тренировка — заливка: сразу видно, какой день читаешь */
+.mc-day-selected {
+  background: #2a7a4a;
+  color: #fff;
+  font-weight: 700;
+}
+
+.mc-day-selected .mc-day-dot {
+  background: #fff;
+}
+
+/* Сегодня и открытая одновременно — заливка со светлой рамкой */
+.mc-day-selected.mc-day-today {
+  box-shadow: inset 0 0 0 2px #8fd;
+  color: #fff;
+}
+
+.mc-day-selected:hover {
+  background: #358f58;
 }
 </style>
