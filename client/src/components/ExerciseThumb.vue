@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useCatalogStore } from '@/stores/catalogStore'
 import { getMuscleGroupPhoto } from '@/constants/muscleGroupPhotos'
 import { getMuscleGroupImage } from '@/constants/muscleGroupIcons'
+import { getExercisePhoto } from '@/constants/exercisePhotos'
 import { musclesOnly } from '@/constants/workloadKinds'
 
 /**
@@ -21,7 +22,17 @@ const hoverPos = ref<{ top: number; left: number } | null>(null)
 
 const exercise = computed(() => catalogStore.getExerciseById(props.exerciseId))
 
-const image = computed(() => {
+// Файл снимка не найден — молча уходим на схему мышц, а не показываем битую картинку
+const photoFailed = ref(false)
+watch(() => props.exerciseId, () => { photoFailed.value = false })
+
+/** Снимок техники именно этого упражнения, если он есть */
+const technique = computed(() => {
+  if (photoFailed.value) return null
+  return getExercisePhoto(props.exerciseId)
+})
+
+const muscleScheme = computed(() => {
   const ids = musclesOnly(exercise.value?.muscleGroups ?? [])
   for (const id of ids) {
     const photo = getMuscleGroupPhoto(id)
@@ -35,13 +46,18 @@ const image = computed(() => {
   return null
 })
 
+const image = computed(() => technique.value?.src ?? muscleScheme.value)
+
 const label = computed(() => exercise.value?.name ?? props.exerciseId)
 
-// Схемы мышц вертикальные, поэтому миниатюра портретная
-const box = computed(() => ({
-  width: `${props.size ?? 46}px`,
-  height: `${Math.round((props.size ?? 46) * 1.35)}px`,
-}))
+// Схемы мышц вертикальные — миниатюра портретная;
+// снимки техники горизонтальные — им нужна широкая рамка
+const box = computed(() => {
+  const size = props.size ?? 46
+  return technique.value?.landscape
+    ? { width: `${Math.round(size * 1.5)}px`, height: `${Math.round(size * 1.0)}px` }
+    : { width: `${size}px`, height: `${Math.round(size * 1.35)}px` }
+})
 
 const PREVIEW_HEIGHT = 420
 
@@ -70,6 +86,7 @@ function hidePreview() {
     @mouseenter="showPreview"
     @mouseleave="hidePreview"
     @click="open = true"
+    @error="photoFailed = true"
   />
 
   <Teleport to="body">
